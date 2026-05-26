@@ -1,0 +1,24 @@
+# Aplicar a todas las páginas
+/*
+  # Evitar que extensiones inyecten scripts o modifiquen el DOM
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data: blob:; img-src 'self' data: blob:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; frame-ancestors 'none'; frame-src 'self'; object-src 'none'; base-uri 'self'; worker-src 'self' blob:
+  # Evitar que la página sea embebida en iframes externos
+  X-Frame-Options: DENY
+  # Evitar MIME sniffing
+  X-Content-Type-Options: nosniff
+  # No indexar en motores de búsqueda las rutas de tools
+  X-Robots-Tag: noarchive
+  # Política de permisos — desactivar features no usadas
+  Permissions-Policy: clipboard-write=(*), clipboard-read=(*), camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=()
+
+/simbolos.html
+  Cache-Control: no-cache, must-revalidate
+
+/tools.html
+  Cache-Control: no-cache, must-revalidate
+
+/sw.js
+  Cache-Control: no-cache, must-revalidate
+
+/manifest.json
+  Cache-Control: no-cache, must-revalidate

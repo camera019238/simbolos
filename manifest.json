@@ -1,0 +1,379 @@
+{
+  "id": "dev.simbolos.app",
+  "name": "Símbolos Unicode",
+  "short_name": "Símbolos",
+  "description": "Explorador de caracteres y símbolos Unicode — música, matemáticas, flechas, emoji, escrituras antiguas y mucho más.",
+  "start_url": "/simbolos.html",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "tabbed",
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#0f1117",
+  "theme_color": "#3b82f6",
+  "lang": "es",
+  "dir": "ltr",
+  "tab_strip": {
+    "home_tab": {
+      "url": "/simbolos.html",
+      "scope_patterns": [
+        {
+          "pathname": "/simbolos.html*"
+        },
+        {
+          "pathname": "/tools.html*"
+        },
+        {
+          "pathname": "/index.html*"
+        },
+        {
+          "pathname": "/"
+        }
+      ]
+    },
+    "new_tab_button": {
+      "url": "/simbolos.html"
+    }
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "handle_links": "preferred",
+  "note_taking": {
+    "new_note_url": "/tools.html?tab=texto"
+  },
+  "scope_extensions": [
+    {
+      "origin": "https://simbolos.pages.dev"
+    },
+    {
+      "origin": "https://tools.simbolos.pages.dev"
+    }
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512-dark.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any",
+      "color_scheme": "dark"
+    },
+    {
+      "src": "icon-192-dark.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any",
+      "color_scheme": "dark"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Catálogo de símbolos Unicode"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Símbolos en móvil"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/tools.html?tab=fuentes",
+      "accept": {
+        "font/ttf": [
+          ".ttf"
+        ],
+        "font/otf": [
+          ".otf"
+        ],
+        "font/woff": [
+          ".woff"
+        ],
+        "font/woff2": [
+          ".woff2"
+        ],
+        "application/octet-stream": [
+          ".fnt",
+          ".ttf",
+          ".otf",
+          ".woff",
+          ".woff2"
+        ]
+      },
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ],
+      "launch_type": "single-client"
+    },
+    {
+      "action": "/tools.html?tab=svg",
+      "accept": {
+        "image/svg+xml": [
+          ".svg"
+        ]
+      },
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ],
+      "launch_type": "single-client"
+    },
+    {
+      "action": "/tools.html?tab=dev",
+      "accept": {
+        "application/json": [
+          ".json"
+        ],
+        "text/plain": [
+          ".txt",
+          ".md"
+        ]
+      },
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ],
+      "launch_type": "single-client"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+simbolos",
+      "url": "/simbolos.html?search=%s"
+    },
+    {
+      "protocol": "web+unicode",
+      "url": "/simbolos.html?search=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/tools.html?tab=texto",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "categories": [
+    "utilities",
+    "education",
+    "productivity"
+  ],
+  "shortcuts": [
+    {
+      "name": "Buscar símbolo",
+      "short_name": "Buscar",
+      "description": "Buscar por nombre o código Unicode",
+      "url": "/simbolos.html?search=1",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Símbolo aleatorio",
+      "short_name": "Aleatorio",
+      "description": "Abrir un símbolo al azar",
+      "url": "/simbolos.html?random=1",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Mis símbolos",
+      "short_name": "Mis símbolos",
+      "description": "Ver historial y favoritos",
+      "url": "/tools.html?tab=mios",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Vista previa de fuente",
+      "short_name": "Fuentes",
+      "description": "Abrir una fuente y previsualizar texto",
+      "url": "/tools.html?tab=fuentes",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Símbolos matemáticos",
+      "short_name": "Matemáticos",
+      "description": "Ver símbolos matemáticos y operadores",
+      "url": "/simbolos.html?tab=math",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Emoji",
+      "short_name": "Emoji",
+      "description": "Explorar emojis Unicode",
+      "url": "/simbolos.html?tab=emoji",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Flechas",
+      "short_name": "Flechas",
+      "description": "Ver flechas y símbolos de dirección",
+      "url": "/simbolos.html?tab=arrows",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Monedas",
+      "short_name": "Monedas",
+      "description": "Ver símbolos de monedas y divisas",
+      "url": "/simbolos.html?tab=currency",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Editor SVG",
+      "short_name": "SVG",
+      "description": "Editor y generador de SVG en vivo",
+      "url": "/tools.html?tab=svg",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Dev Tools",
+      "short_name": "Dev",
+      "description": "Regex, JSON, Base64, URL encoder y más",
+      "url": "/tools.html?tab=dev",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Arcade",
+      "short_name": "Arcade",
+      "description": "Snake, Memory y Wordle con símbolos Unicode",
+      "url": "/tools.html?tab=arcade",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Convertidor de texto",
+      "short_name": "Texto",
+      "description": "Transformar y analizar texto Unicode",
+      "url": "/tools.html?tab=texto",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Detector Unicode",
+      "short_name": "Detector",
+      "description": "Inspeccionar caracteres y scripts",
+      "url": "/tools.html?tab=detector",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false,
+  "permissions": [
+    "clipboard-read",
+    "clipboard-write",
+    "periodic-background-sync",
+    "background-fetch",
+    "app-badge"
+  ]
+}

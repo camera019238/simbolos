@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>404 — Página no encontrada</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#3b82f6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+
+<script>
+(function(){
+  const s = document.createElement('style');
+  if (navigator.onLine) {
+    s.textContent = "@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400..800&family=DM+Mono:ital,wght@0,400;0,500&display=swap');";
+  } else {
+    s.textContent = `
+      @font-face{font-family:'Syne';src:url('fonts/syne-variable.ttf') format('truetype');font-weight:400 800;font-display:swap}
+      @font-face{font-family:'DM Mono';src:url('fonts/dm-mono-regular.ttf') format('truetype');font-weight:400;font-display:swap}
+    `;
+  }
+  document.head.appendChild(s);
+})();
+</script>
+
+<style>
+:root{
+  --bg:#f7f5f0;--bg2:#eeeae2;--surface:#ffffff;--surface2:#f0ece4;
+  --border:#ddd8ce;--text:#1a1714;--text2:#6b6460;
+  --accent:#2563eb;--accent2:#38bdf8;--accent3:#0ea5e9;
+  --shadow:rgba(0,0,0,0.08);--shadow2:rgba(0,0,0,0.15);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#080d1a;--bg2:#0d1525;--surface:#111d35;--surface2:#1a2740;
+    --border:#1e2f50;--text:#f0ece4;--text2:#8c8480;
+    --accent:#3b82f6;--accent2:#7dd3fc;--accent3:#38bdf8;
+    --shadow:rgba(0,0,0,0.4);--shadow2:rgba(0,0,0,0.6);
+  }
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  font-family:'Syne',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+  position:relative;
+  user-select:none;
+  -webkit-user-select:none;
+}
+
+/* ── CANVAS STARFIELD ── */
+#starfield{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+}
+
+/* ── NOISE OVERLAY ── */
+body::before{
+  content:'';position:fixed;inset:-80px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity:0.022;pointer-events:none;z-index:0;
+  animation:noiseFloat 9s linear infinite alternate;
+}
+@keyframes noiseFloat{0%{transform:translate(0,0)}100%{transform:translate(-50px,-50px)}}
+
+/* ── ORBS ── */
+.orb{position:fixed;border-radius:50%;filter:blur(110px);pointer-events:none;z-index:0}
+.orb-1{width:60vw;height:60vw;top:-20vw;left:-15vw;
+  background:radial-gradient(circle,rgba(37,99,235,0.22),transparent 70%);
+  animation:orb1 22s ease-in-out infinite}
+.orb-2{width:45vw;height:45vw;bottom:-15vw;right:-12vw;
+  background:radial-gradient(circle,rgba(130,60,255,0.18),transparent 70%);
+  animation:orb2 26s ease-in-out infinite}
+.orb-3{width:30vw;height:30vw;top:40%;left:55%;
+  background:radial-gradient(circle,rgba(14,165,233,0.12),transparent 70%);
+  animation:orb2 18s ease-in-out infinite reverse}
+@keyframes orb1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(80px,-50px) scale(1.1)}66%{transform:translate(-40px,60px) scale(0.92)}}
+@keyframes orb2{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-60px,40px) scale(0.88)}66%{transform:translate(50px,-70px) scale(1.08)}}
+
+/* ── LAYOUT ── */
+.page{
+  position:relative;z-index:1;
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:60px 20px 60px;
+  gap:0;
+}
+
+/* ── GIANT 404 BEHIND CARD ── */
+.backdrop-num{
+  position:fixed;
+  top:50%;left:50%;
+  transform:translate(-50%,-54%);
+  font-size:clamp(200px,40vw,400px);
+  font-weight:800;
+  letter-spacing:-16px;
+  line-height:1;
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  opacity:0.045;
+  pointer-events:none;
+  z-index:0;
+  white-space:nowrap;
+  animation:backdropPulse 6s ease-in-out infinite;
+}
+@keyframes backdropPulse{0%,100%{opacity:0.045;transform:translate(-50%,-54%) scale(1)}50%{opacity:0.065;transform:translate(-50%,-54%) scale(1.02)}}
+
+/* ── CARD ── */
+.card{
+  position:relative;z-index:2;
+  background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--border);
+  border-radius:32px;
+  padding:56px 52px 48px;
+  max-width:500px;width:calc(100% - 32px);
+  text-align:center;
+  box-shadow:0 32px 100px var(--shadow2),0 0 0 1px color-mix(in srgb,var(--accent) 8%,transparent);
+  animation:cardIn 0.6s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(40px) scale(0.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* shimmer border */
+.card::before{
+  content:'';position:absolute;inset:-1px;border-radius:33px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 60%,transparent),transparent 40%,color-mix(in srgb,var(--accent2) 40%,transparent) 80%,transparent);
+  z-index:-1;opacity:0.5;
+  animation:borderShimmer 4s linear infinite;
+}
+@keyframes borderShimmer{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
+
+/* ── SYMBOL ORBIT ── */
+.sym-orbit{
+  position:relative;
+  width:100px;height:100px;
+  margin:0 auto 28px;
+}
+.sym-center{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:44px;line-height:1;
+  animation:symSpin 0s linear infinite;
+  z-index:2;
+}
+.orbit-ring{
+  position:absolute;inset:0;
+  animation:ringRotate 8s linear infinite;
+}
+.orbit-dot{
+  position:absolute;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--accent);
+  top:0;left:50%;transform:translateX(-50%);
+  box-shadow:0 0 8px var(--accent2);
+  animation:dotPulse 2s ease-in-out infinite;
+}
+.orbit-ring-2{
+  position:absolute;inset:-18px;
+  animation:ringRotate 13s linear infinite reverse;
+  opacity:0.45;
+}
+.orbit-dot-2{
+  position:absolute;
+  width:5px;height:5px;border-radius:50%;
+  background:var(--accent2);
+  top:0;left:50%;transform:translateX(-50%);
+}
+@keyframes ringRotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes dotPulse{0%,100%{opacity:1;transform:translateX(-50%) scale(1)}50%{opacity:0.5;transform:translateX(-50%) scale(0.7)}}
+@keyframes symFloat{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(4deg)}}
+
+/* ── 404 TEXT ── */
+.error-num{
+  font-size:clamp(72px,16vw,110px);
+  font-weight:800;
+  letter-spacing:-4px;
+  line-height:1;
+  margin-bottom:6px;
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 60%,var(--accent3) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  position:relative;
+  animation:numPulse 4s ease-in-out infinite;
+}
+@keyframes numPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
+
+/* glitch */
+.error-num::before,.error-num::after{
+  content:'404';position:absolute;inset:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  opacity:0;
+}
+.error-num::before{animation:glitch1 6s infinite 2s}
+.error-num::after {animation:glitch2 6s infinite 2.4s}
+@keyframes glitch1{0%,91%,100%{opacity:0;transform:none}92%{opacity:.7;transform:translate(-4px,2px) skewX(-3deg);filter:hue-rotate(50deg) brightness(1.4)}94%{opacity:0}96%{opacity:.4;transform:translate(4px,-2px) skewX(2deg)}97%{opacity:0}}
+@keyframes glitch2{0%,93%,100%{opacity:0;transform:none}94%{opacity:.5;transform:translate(5px,3px) skewX(4deg);filter:hue-rotate(-80deg) brightness(1.5)}95%{opacity:0}98%{opacity:.3;transform:translate(-3px,1px)}99%{opacity:0}}
+
+.error-label{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--text2);margin-bottom:18px;
+}
+
+.error-title{
+  font-size:21px;font-weight:800;letter-spacing:-0.4px;
+  color:var(--text);margin-bottom:12px;
+  line-height:1.2;
+}
+
+.error-desc{
+  font-family:'DM Mono',monospace;font-size:12.5px;
+  color:var(--text2);line-height:1.75;margin-bottom:28px;
+}
+
+/* ── PATH PILL ── */
+.path-pill{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:'DM Mono',monospace;font-size:11.5px;
+  padding:6px 14px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:999px;
+  color:var(--accent);
+  margin-bottom:30px;
+  max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;
+  letter-spacing:0.3px;
+  animation:pathBlink 3s ease-in-out infinite;
+}
+.path-pill::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--accent3);flex-shrink:0;
+  animation:blink 1.2s step-end infinite;
+}
+@keyframes pathBlink{0%,100%{box-shadow:none}50%{box-shadow:0 0 12px color-mix(in srgb,var(--accent) 20%,transparent)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* ── BUTTONS ── */
+.btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:0}
+
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:12px 24px;border-radius:14px;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;
+  letter-spacing:0.3px;cursor:pointer;text-decoration:none;
+  border:1.5px solid transparent;
+  transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.2s,background 0.15s,border-color 0.15s,color 0.15s;
+  white-space:nowrap;
+}
+.btn:hover{transform:scale(1.07) translateY(-2px)}
+.btn:active{transform:scale(0.94);transition-duration:0.07s}
+
+.btn-primary{
+  background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,var(--accent2)));
+  color:#fff;
+  box-shadow:0 4px 20px color-mix(in srgb,var(--accent) 45%,transparent);
+}
+.btn-primary:hover{box-shadow:0 8px 32px color-mix(in srgb,var(--accent) 55%,transparent)}
+
+.btn-ghost{
+  background:var(--surface2);border-color:var(--border);color:var(--text2);
+}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface2))}
+
+/* ── DIVIDER ── */
+.divider{
+  display:flex;align-items:center;gap:12px;
+  margin:32px 0 20px;
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);
+}
+.divider::before,.divider::after{
+  content:'';flex:1;height:1px;background:var(--border);
+}
+
+/* ── SUGGESTIONS ── */
+.sug-list{display:flex;flex-direction:column;gap:8px}
+
+.sug-link{
+  display:flex;align-items:center;gap:12px;
+  padding:13px 16px;border-radius:14px;
+  border:1px solid var(--border);
+  background:var(--surface2);
+  text-decoration:none;color:var(--text);
+  font-size:13px;font-weight:600;
+  transition:border-color 0.15s,background 0.15s,transform 0.2s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.15s;
+  position:relative;overflow:hidden;
+}
+.sug-link::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--accent) 8%,transparent),transparent);
+  opacity:0;transition:opacity 0.3s;
+}
+.sug-link:hover{
+  border-color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 6%,var(--surface2));
+  transform:translateX(6px);
+  box-shadow:0 4px 16px var(--shadow);
+}
+.sug-link:hover::after{opacity:1}
+.sug-link:active{transform:scale(0.97);transition-duration:0.07s}
+
+.sug-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:color-mix(in srgb,var(--accent) 12%,var(--bg2));
+  border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.sug-text{text-align:left}
+.sug-name{font-size:13px;font-weight:700;color:var(--text)}
+.sug-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);margin-top:2px}
+.sug-arrow{margin-left:auto;color:var(--text2);opacity:0;transition:opacity 0.15s,transform 0.2s;flex-shrink:0}
+.sug-link:hover .sug-arrow{opacity:1;transform:translateX(3px)}
+
+/* ── MOBILE ── */
+@media(max-width:520px){
+  .card{padding:40px 24px 36px;border-radius:24px}
+  .error-num{font-size:clamp(64px,18vw,96px);letter-spacing:-3px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+<div class="backdrop-num">404</div>
+
+<div class="page">
+<div class="card">
+
+  <!-- Symbol orbit -->
+  <div class="sym-orbit">
+    <div class="orbit-ring">
+      <div class="orbit-dot"></div>
+    </div>
+    <div class="orbit-ring-2">
+      <div class="orbit-dot-2"></div>
+    </div>
+    <div class="sym-center" id="sym-center" style="animation:symFloat 4s ease-in-out infinite">∅</div>
+  </div>
+
+  <div class="error-num">404</div>
+  <div class="error-label">Error · Página no encontrada</div>
+
+  <h1 class="error-title">Este símbolo no existe<br>en ningún plano Unicode</h1>
+
+  <p class="error-desc">
+    La URL que buscas se perdió en el vacío del espacio de caracteres.<br>
+    Puede que haya sido movida, eliminada o nunca existió.
+  </p>
+
+  <div class="path-pill" id="error-path">/???</div>
+
+  <div class="btn-row">
+    <a href="simbolos.html" class="btn btn-primary">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path d="M3 12h18M3 12l7-7M3 12l7 7"/></svg>
+      Volver al inicio
+    </a>
+    <a href="tools.html" class="btn btn-ghost">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      Herramientas
+    </a>
+  </div>
+
+  <div class="divider">Quizás buscabas</div>
+
+  <div class="sug-list">
+    <a href="simbolos.html" class="sug-link">
+      <div class="sug-icon">✦</div>
+      <div class="sug-text">
+        <div class="sug-name">Símbolos Unicode</div>
+        <div class="sug-sub">Explora miles de caracteres</div>
+      </div>
+      <svg class="sug-arrow" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+    <a href="tools.html" class="sug-link">
+      <div class="sug-icon">🔧</div>
+      <div class="sug-text">
+        <div class="sug-name">Herramientas</div>
+        <div class="sug-sub">Conversor, inspector, matemáticas…</div>
+      </div>
+      <svg class="sug-arrow" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+    <a href="download.html" class="sug-link">
+      <div class="sug-icon">⬇</div>
+      <div class="sug-text">
+        <div class="sug-name">Descargas</div>
+        <div class="sug-sub">Fuentes y recursos del proyecto</div>
+      </div>
+      <svg class="sug-arrow" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+    <a href="https://unicode.org" target="_blank" rel="noopener" class="sug-link">
+      <div class="sug-icon">🌐</div>
+      <div class="sug-text">
+        <div class="sug-name">unicode.org</div>
+        <div class="sug-sub">El estándar Unicode oficial</div>
+      </div>
+      <svg class="sug-arrow" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ── PATH ── */
+const pathEl = document.getElementById('error-path');
+if (pathEl) {
+  const p = location.pathname || '/???';
+  pathEl.textContent = p.length > 42 ? p.slice(0, 40) + '…' : p;
+}
+
+/* ── ROTATING SYMBOLS ── */
+const SYMS = ['∅','⊘','✗','⚠','☠','⛔','◌','≠','⁇','∞','✦','⌫','⊙','◯'];
+let si = 0;
+const symEl = document.getElementById('sym-center');
+setInterval(() => {
+  si = (si + 1) % SYMS.length;
+  if (!symEl) return;
+  symEl.style.transition = 'opacity 0.2s, transform 0.2s';
+  symEl.style.opacity = '0';
+  symEl.style.transform = 'scale(0.5) rotate(30deg)';
+  setTimeout(() => {
+    symEl.textContent = SYMS[si];
+    symEl.style.opacity = '1';
+    symEl.style.transform = '';
+  }, 220);
+}, 2600);
+
+/* ── STARFIELD ── */
+(function() {
+  const canvas = document.getElementById('starfield');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const N = isDark ? 130 : 55;
+  const STAR_OPACITY = isDark ? 0.7 : 0.25;
+
+  for (let i = 0; i < N; i++) {
+    stars.push({
+      x: Math.random(),
+      y: Math.random(),
+      r: Math.random() * 1.4 + 0.3,
+      speed: Math.random() * 0.00012 + 0.00004,
+      phase: Math.random() * Math.PI * 2,
+      twinkle: Math.random() * 0.5 + 0.5,
+    });
+  }
+
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    t += 0.016;
+    for (const s of stars) {
+      const x = (s.x + s.speed * t * 0.3) % 1;
+      const opacity = STAR_OPACITY * (s.twinkle * 0.5 + 0.5 + 0.3 * Math.sin(t * 1.2 + s.phase));
+      ctx.beginPath();
+      ctx.arc(x * W, s.y * H, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = isDark
+        ? `rgba(180,210,255,${Math.min(1, opacity)})`
+        : `rgba(37,99,235,${Math.min(0.35, opacity)})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+/* ── JUMPSCARE ── */
+setTimeout(() => {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:99999;
+    background:#000;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    animation:scareIn 0.06s steps(1) both;
+  `;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes scareIn{from{opacity:0}to{opacity:1}}
+    @keyframes scareShake{
+      0%,100%{transform:translate(0,0) rotate(0deg)}
+      10%{transform:translate(-8px,6px) rotate(-2deg)}
+      20%{transform:translate(10px,-8px) rotate(2deg)}
+      30%{transform:translate(-12px,4px) rotate(-1deg)}
+      40%{transform:translate(8px,10px) rotate(3deg)}
+      50%{transform:translate(-6px,-6px) rotate(-2deg)}
+      60%{transform:translate(12px,4px) rotate(1deg)}
+      70%{transform:translate(-10px,8px) rotate(-3deg)}
+      80%{transform:translate(6px,-10px) rotate(2deg)}
+      90%{transform:translate(-4px,6px) rotate(-1deg)}
+    }
+    .scare-sym{
+      font-size:clamp(160px,35vw,280px);
+      line-height:1;
+      animation:scareShake 0.4s ease-in-out infinite;
+      filter:drop-shadow(0 0 40px #ff0000) drop-shadow(0 0 80px #ff000088);
+      color:#fff;
+    }
+    .scare-text{
+      position:absolute;bottom:12vh;
+      font-family:'DM Mono',monospace;
+      font-size:clamp(11px,2vw,16px);
+      color:rgba(255,255,255,0.35);
+      letter-spacing:2px;
+      text-transform:uppercase;
+    }
+  `;
+  document.head.appendChild(style);
+
+  const sym = document.createElement('div');
+  sym.className = 'scare-sym';
+  sym.textContent = '⚠';
+
+  const hint = document.createElement('div');
+  hint.className = 'scare-text';
+  hint.textContent = 'Pulsa para continuar';
+
+  overlay.appendChild(sym);
+  overlay.appendChild(hint);
+  document.body.appendChild(overlay);
+
+  // screech sound via Web Audio
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    [180, 340, 520, 700, 900, 1100].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now + i * 0.04);
+      osc.frequency.linearRampToValueAtTime(freq * 2.8, now + i * 0.04 + 0.3);
+      gain.gain.setValueAtTime(0.22, now + i * 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.04);
+      osc.stop(now + i * 0.04 + 0.55);
+    });
+  } catch(e) {}
+
+  overlay.addEventListener('click', () => {
+    overlay.style.transition = 'opacity 0.3s';
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 320);
+  });
+
+}, 60000);
+</script>
+
+</body>
+</html>
