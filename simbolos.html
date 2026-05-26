@@ -1,0 +1,4699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+<script>
+/* ── BLOQUEO DE EXTENSIONES ─────────────────────────────────── */
+(function() {
+  // Detectar scripts inyectados por extensiones observando el DOM
+  const observer = new MutationObserver(mutations => {
+    for (const m of mutations) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        const src = node.src || node.href || '';
+        if (src.startsWith('chrome-extension://') || src.startsWith('moz-extension://')) {
+          node.remove();
+          console.warn('[Símbolos] Script de extensión bloqueado:', src);
+        }
+      }
+    }
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  // Bloquear acceso a window desde extensiones content scripts
+  // (no podemos hacer mucho más sin CSP, pero sí podemos notificar)
+  const origDefProp = Object.defineProperty;
+  let extWarned = false;
+  Object.defineProperty = function(obj, prop, descriptor) {
+    if (obj === window && !extWarned) {
+      const stack = new Error().stack || '';
+      if (stack.includes('chrome-extension://') || stack.includes('moz-extension://')) {
+        extWarned = true;
+        console.warn('[Símbolos] Extensión intentó modificar window.' + prop);
+        return obj;
+      }
+    }
+    return origDefProp.call(this, obj, prop, descriptor);
+  };
+})();
+</script>
+
+<meta charset="UTF-8">
+<title>Símbolos Unicode</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#3b82f6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Símbolos">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512-dark.png" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192-dark.png" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32-dark.png" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<!-- Fuentes: online = Google Fonts, offline = /fonts/ local -->
+<script>
+  (function() {
+    const s = document.createElement('style');
+    if (navigator.onLine) {
+      s.textContent = "@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400..800&family=DM+Mono:ital,wght@0,400;0,500&display=swap');";
+    } else {
+      s.textContent = `
+        @font-face { font-family:'Syne';   src:url('fonts/syne-variable.ttf') format('truetype'); font-weight:400 800; font-style:normal; font-display:swap; }
+        @font-face { font-family:'DM Mono';src:url('fonts/dm-mono-regular.ttf') format('truetype'); font-weight:400; font-style:normal; font-display:swap; }
+      `;
+    }
+    document.head.appendChild(s);
+
+    // Fonts de símbolos siempre desde local
+    const sym = document.createElement('style');
+    sym.textContent = `
+      @font-face { font-family:'Noto Music';          src:url('fonts/noto-music.ttf')            format('truetype'); font-weight:400; font-style:normal; font-display:swap; }
+      @font-face { font-family:'Noto Sans Math';      src:url('fonts/noto-sans-math.ttf')        format('truetype'); font-weight:400; font-style:normal; font-display:swap; }
+      @font-face { font-family:'Noto Sans Symbols';   src:url('fonts/noto-sans-symbols.ttf')     format('truetype'); font-weight:400; font-style:normal; font-display:swap; }
+      @font-face { font-family:'Noto Sans Symbols 2'; src:url('fonts/noto-sans-symbols2.ttf')    format('truetype'); font-weight:400; font-style:normal; font-display:swap; }
+      @font-face { font-family:'Noto Emoji';          src:url('fonts/noto-emoji.ttf')            format('truetype'); font-weight:400; font-style:normal; font-display:swap; }
+      @font-face { font-family:'Noto Sans';           src:url('fonts/noto-sans.ttf')             format('truetype'); font-weight:400; font-style:normal; font-display:swap; }
+      @font-face { font-family:'STIX Two Math';       src:url('fonts/stix-two-math.ttf')         format('truetype'); font-weight:400; font-style:normal; font-display:swap; }
+    `;
+    document.head.appendChild(sym);
+  })();
+</script>
+
+<style>
+:root {
+  --bg: #f7f5f0;
+  --bg2: #eeeae2;
+  --surface: #ffffff;
+  --surface2: #f0ece4;
+  --border: #ddd8ce;
+  --text: #1a1714;
+  --text2: #6b6460;
+  --accent: #2563eb;
+  --accent2: #38bdf8;
+  --accent3: #0ea5e9;
+  --shadow: rgba(0,0,0,0.08);
+  --shadow2: rgba(0,0,0,0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #080d1a;
+    --bg2: #0d1525;
+    --surface: #111d35;
+    --surface2: #302c28;
+    --border: #1e2f50;
+    --text: #f0ece4;
+    --text2: #8c8480;
+    --accent: #3b82f6;
+    --accent2: #7dd3fc;
+    --accent3: #38bdf8;
+    --shadow: rgba(0,0,0,0.4);
+    --shadow2: rgba(0,0,0,0.6);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Syne', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ── ANIMATED BACKGROUND ── */
+@keyframes orb1 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33%     { transform: translate(80px,-50px) scale(1.1); }
+  66%     { transform: translate(-40px,60px) scale(0.92); }
+}
+@keyframes orb2 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33%     { transform: translate(-60px,40px) scale(0.88); }
+  66%     { transform: translate(50px,-70px) scale(1.08); }
+}
+@keyframes noiseFloat {
+  0%   { transform: translate(0,0); }
+  100% { transform: translate(-50px,-50px); }
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: -80px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.022;
+  pointer-events: none;
+  z-index: 0;
+  animation: noiseFloat 9s linear infinite alternate;
+}
+
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+}
+.orb-1 {
+  width: 55vw; height: 55vw;
+  top: -18vw; left: -12vw;
+  background: radial-gradient(circle, rgba(60,100,255,0.18), transparent 70%);
+  animation: orb1 20s ease-in-out infinite;
+}
+.orb-2 {
+  width: 40vw; height: 40vw;
+  bottom: -12vw; right: -10vw;
+  background: radial-gradient(circle, rgba(130,60,255,0.14), transparent 70%);
+  animation: orb2 24s ease-in-out infinite;
+}
+
+/* HEADER */
+header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 28px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px var(--shadow);
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.logo span { color: var(--accent); }
+.logo-sub {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text2);
+  letter-spacing: 0.2px;
+  margin-top: 2px;
+}
+
+/* BACK TO MENU */
+.back-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+  align-self: center;
+}
+.back-menu-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* SEARCH TRIGGER BUTTON */
+.search-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+.search-trigger-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* Buscar específico — más jugoso */
+#search-trigger-btn {
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb,var(--accent) 70%,#8b5cf6));
+  border-color: transparent;
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 11px 22px;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px color-mix(in srgb,var(--accent) 40%,transparent);
+  letter-spacing: 0.2px;
+}
+#search-trigger-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18), transparent 60%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+#search-trigger-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 32px color-mix(in srgb,var(--accent) 55%,transparent);
+  color: white;
+  border-color: transparent;
+}
+#search-trigger-btn:active {
+  transform: scale(0.97);
+  transition-duration: 0.08s;
+}
+#search-trigger-btn svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.5;
+}
+
+/* SEARCH POPUP OVERLAY — pantalla completa tipo spotlight */
+#search-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 50000;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 16px 16px;
+}
+#search-popup-overlay.open {
+  display: flex;
+  animation: fadeIn 0.15s ease;
+}
+
+.search-popup-card {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb,var(--accent) 25%,var(--border));
+  border-radius: 28px;
+  width: 100%;
+  max-width: 860px;
+  max-height: 88vh;
+  box-shadow:
+    0 48px 140px rgba(0,0,0,0.6),
+    0 0 0 1px color-mix(in srgb,var(--accent) 25%,transparent),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  animation: searchCardIn 0.25s cubic-bezier(0.22,1,0.36,1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.search-popup-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 180px;
+  background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb,var(--accent) 18%,transparent), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes searchCardIn {
+  from { opacity:0; transform: scale(0.94) translateY(24px); }
+  to   { opacity:1; transform: scale(1)    translateY(0); }
+}
+
+/* MODE PILLS */
+.search-type-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 22px 28px 0;
+  background: transparent;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.search-type-tabs::-webkit-scrollbar { display: none; }
+.search-type-tab {
+  min-width: max-content;
+  padding: 9px 20px;
+  border: 1.5px solid var(--border);
+  background: color-mix(in srgb,var(--surface2) 80%,transparent);
+  color: var(--text2);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  border-radius: 50px;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+  backdrop-filter: blur(8px);
+}
+.search-type-tab:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+.search-type-tab.active {
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb,var(--accent) 70%,#8b5cf6));
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 4px 14px color-mix(in srgb,var(--accent) 40%,transparent);
+  transform: translateY(-1px);
+}
+
+/* BIG INPUT */
+.search-input-row {
+  display: flex;
+  align-items: center;
+  padding: 18px 28px 14px;
+  gap: 12px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.search-prefix {
+  font-family: 'DM Mono', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, color-mix(in srgb,var(--accent) 15%,transparent), color-mix(in srgb,var(--accent) 8%,transparent));
+  border: 2px solid color-mix(in srgb,var(--accent) 35%,transparent);
+  border-radius: 14px;
+  padding: 13px 18px;
+}
+
+.search-divider { display: none; }
+
+#search-popup-input {
+  flex: 1;
+  padding: 16px 24px;
+  border: 2px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg2);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 28px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  min-width: 0;
+  font-weight: 500;
+}
+#search-popup-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 5px color-mix(in srgb,var(--accent) 15%,transparent);
+  background: var(--surface);
+}
+#search-popup-input::placeholder { color: var(--text2); font-size: 20px; font-style: italic; font-weight: 400; }
+
+/* Close hint */
+.search-hint {
+  padding: 0 28px 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11.5px;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  border-bottom: 1px solid var(--border);
+  margin: 0 0 4px;
+}
+.search-hint kbd {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text2);
+  box-shadow: 0 2px 0 var(--border);
+}
+
+/* RESULTS */
+.search-popup-results {
+  padding: 14px 24px 24px;
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  min-height: 0;
+}
+
+/* LOADING STATE */
+.search-loading {
+  display: none;
+  text-align: center;
+  padding: 48px 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--text2);
+  letter-spacing: 1px;
+}
+.search-loading.show { display: block; }
+.search-loading::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 8px;
+  animation: pulse 0.6s infinite alternate;
+}
+@keyframes pulse {
+  from { opacity: 0.2; transform: scale(0.8); }
+  to   { opacity: 1;   transform: scale(1.2); }
+}
+
+.search-popup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 10px;
+}
+
+.search-popup-no-results {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text2);
+  font-size: 13px;
+  font-family: 'DM Mono', monospace;
+  display: none;
+}
+.search-popup-no-results.show { display: block; }
+
+/* STATS */
+.search-count {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text2);
+  padding: 4px 10px;
+  background: var(--surface2);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* TABS WRAP */
+.tabs-wrap { position: relative; }
+.tabs-wrap::before, .tabs-wrap::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 40px;
+  pointer-events: none; z-index: 2;
+}
+.tabs-wrap::before { left: 0;  background: linear-gradient(to right, var(--bg2) 40%, transparent); }
+.tabs-wrap::after  { right: 0; background: linear-gradient(to left,  var(--bg2) 40%, transparent); }
+
+/* TABS */
+.tabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 0;
+  position: relative;
+  scroll-behavior: smooth;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+/* SLIDING INDICATOR */
+.tab-indicator {
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), width 0.3s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.tab-btn {
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, background 0.2s, transform 0.15s ease;
+  letter-spacing: 0.3px;
+  border-radius: 8px 8px 0 0;
+}
+
+.tab-btn:hover { color: var(--text); background: color-mix(in srgb, var(--accent) 7%, transparent); transform: translateY(-1px); }
+.tab-btn:active { transform: translateY(0) scale(0.97); transition-duration: 0.07s; }
+.tab-btn.active { color: var(--accent); }
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* MAIN */
+main {
+  padding: 24px 28px;
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* SUBCATS */
+.subcat-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.subcat-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  letter-spacing: 0.3px;
+}
+
+.subcat-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px) scale(1.04);
+}
+.subcat-btn:active { transform: scale(0.97); transition-duration: 0.08s; }
+
+.subcat-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+/* SECTION TITLE */
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text2);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+@keyframes boxPop {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(-5px) scale(1.04); }
+  70%  { transform: translateY(-3px) scale(1.02); }
+  100% { transform: translateY(-4px) scale(1.03); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* BOX */
+.box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px 12px 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(80,60,220,0.16) 50%, transparent 70%);
+  background-size: 200% 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.box:hover {
+  animation: boxPop 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  box-shadow: 0 10px 28px var(--shadow2);
+  border-color: var(--accent);
+}
+.box:hover::after {
+  opacity: 1;
+  animation: shimmer 0.5s ease forwards;
+}
+.box:active { transform: scale(0.97); transition: transform 0.08s; }
+
+.symbol {
+  font-size: 42px;
+  line-height: 1;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.box-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.copy-btn, .info-btn {
+  width: 100%;
+  padding: 6px 0;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  transition: background 0.15s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.15s;
+}
+
+.copy-btn {
+  background: color-mix(in srgb, var(--accent3) 15%, transparent);
+  color: var(--accent3);
+}
+
+.copy-btn:hover {
+  background: color-mix(in srgb, var(--accent3) 25%, transparent);
+  transform: scale(1.04);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--accent3) 25%, transparent);
+}
+.copy-btn:active { transform: scale(0.94); transition-duration: 0.07s; }
+
+.copy-btn.copied {
+  background: var(--accent3);
+  color: white;
+}
+
+.info-btn {
+  background: color-mix(in srgb, var(--accent2) 15%, transparent);
+  color: color-mix(in srgb, var(--accent2) 80%, var(--text));
+}
+
+.info-btn:hover {
+  background: color-mix(in srgb, var(--accent2) 25%, transparent);
+  transform: scale(1.04);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--accent2) 20%, transparent);
+}
+.info-btn:active { transform: scale(0.94); transition-duration: 0.07s; }
+
+/* (search results now live in popup) */
+
+/* INFO MODAL */
+#info-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 60000;
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+
+#info-modal.open {
+  display: flex;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px var(--shadow2);
+  animation: slideUp 0.2s ease;
+  position: relative;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-symbol {
+  font-size: 72px;
+  text-align: center;
+  line-height: 1;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: var(--bg2);
+  border-radius: 16px;
+}
+
+.modal-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.modal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-radius: 10px;
+  gap: 12px;
+}
+
+.modal-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+.modal-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+  word-break: break-all;
+  text-align: right;
+}
+
+.modal-copy-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.modal-copy-btn {
+  padding: 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.modal-copy-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface2));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 40%, transparent),
+              0 0 28px color-mix(in srgb, var(--accent) 20%, transparent);
+  transform: translateY(-1px) scale(1.03);
+}
+
+.modal-copy-btn:active { transform: scale(0.96); transition-duration: 0.07s; }
+
+.modal-copy-btn.copied {
+  border-color: var(--accent3);
+  color: var(--accent3);
+  background: color-mix(in srgb, var(--accent3) 12%, var(--surface2));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent3) 45%, transparent),
+              0 0 28px color-mix(in srgb, var(--accent3) 22%, transparent);
+}
+
+.modal-fav-btn {
+  width: 100%;
+  padding: 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--text2);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+.modal-fav-btn:hover {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 10%, var(--surface2));
+  box-shadow: 0 0 14px rgba(245,158,11,0.38), 0 0 28px rgba(245,158,11,0.16);
+  transform: translateY(-1px) scale(1.02);
+}
+.modal-fav-btn.fav-active {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 12%, var(--surface2));
+  box-shadow: 0 0 12px rgba(245,158,11,0.35), 0 0 22px rgba(245,158,11,0.14);
+}
+.modal-fav-btn.fav-active:hover {
+  box-shadow: 0 0 18px rgba(245,158,11,0.55), 0 0 32px rgba(245,158,11,0.22);
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: var(--surface2);
+  color: var(--text2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.modal-close:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* SUBTAB CONTENT */
+.subtab-content { display: none; }
+.subtab-content.active { display: block; animation: tabFadeIn 0.22s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* SYMBOL NAME */
+.sym-name {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: var(--text2);
+  text-align: center;
+  line-height: 1.3;
+  word-break: break-word;
+  max-height: 28px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+/* FONT CLASSES */
+.font-music { font-family: 'Noto Music', sans-serif; }
+.font-math { font-family: 'Noto Sans Math', 'Noto Sans Symbols', 'Noto Sans Symbols 2', sans-serif; }
+.font-math-vars {
+  font-family: 'STIX Two Math', 'Latin Modern Math', 'Noto Sans Math', serif;
+  font-size: 42px !important;
+}
+.font-currency { font-family: 'Noto Sans Symbols 2', 'Noto Sans Symbols', 'Noto Sans', 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif; }
+.font-ctrl1 {
+  font-family: 'DM Mono', monospace;
+  font-size: 18px !important;
+  color: var(--text2);
+  letter-spacing: 0.5px;
+}
+.font-symbols { font-family: 'Noto Sans Symbols', 'Noto Sans Symbols 2', sans-serif; }
+.font-emoji { font-family: 'Noto Emoji', sans-serif; }
+.font-cjk     { font-family: 'Noto Sans', 'Noto Sans CJK SC', 'SimSun', 'Microsoft YaHei', sans-serif; font-size: 36px !important; }
+.font-ancient  { font-family: 'Noto Sans', 'Noto Serif', 'Segoe UI Historic', 'Segoe UI Symbol', serif; font-size: 32px !important; }
+
+/* DOWNLOAD BUTTON */
+.download-btn {
+  position: fixed;
+  top: 16px;
+  right: 210px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 2px 10px var(--shadow);
+}
+.download-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 40%, transparent),
+              0 0 28px color-mix(in srgb, var(--accent) 18%, transparent),
+              0 4px 12px var(--shadow2);
+  transform: translateY(-1px) scale(1.06);
+}
+
+/* REPORT BUTTON */
+.report-btn {
+  position: fixed;
+  top: 16px;
+  right: 155px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 2px 10px var(--shadow);
+}
+.report-btn:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  box-shadow: 0 0 14px rgba(239,68,68,0.40),
+              0 0 28px rgba(239,68,68,0.18),
+              0 4px 12px var(--shadow2);
+  transform: translateY(-1px) scale(1.06);
+}
+
+/* SHARE BUTTON */
+.share-btn {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 2px 10px var(--shadow);
+}
+.share-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 40%, transparent),
+              0 0 28px color-mix(in srgb, var(--accent) 18%, transparent),
+              0 4px 12px var(--shadow2);
+  transform: translateY(-1px) scale(1.04);
+}
+
+/* SHARE POPUP */
+#share-popup {
+  position: fixed;
+  top: 58px;
+  right: 20px;
+  z-index: 300;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  width: 300px;
+  box-shadow: 0 12px 40px var(--shadow2);
+  display: none;
+  animation: slideUp 0.18s cubic-bezier(0.22,1,0.36,1);
+}
+#share-popup.open { display: block; }
+
+.share-popup-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text2);
+  margin-bottom: 10px;
+}
+
+.share-url {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  word-break: break-all;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.share-copy-btn {
+  width: 100%;
+  padding: 9px;
+  border: none;
+  border-radius: 9px;
+  background: #22c55e;
+  color: white;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  margin-bottom: 18px;
+}
+.share-copy-btn:hover { background: #16a34a; }
+.share-copy-btn.copied { background: #15803d; }
+
+.share-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+
+.share-other-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text2);
+  margin-bottom: 10px;
+}
+
+.share-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.share-link {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  transition: border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.share-link:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface2));
+}
+
+#pangram-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 50000;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-bottom: 40px;
+  overflow-y: auto;
+}
+#pangram-popup-overlay.open {
+  display: flex;
+  animation: fadeIn 0.18s ease;
+}
+
+.pangram-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pangram-text {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.pangram-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text2);
+  letter-spacing: 0.3px;
+}
+
+.pangram-copy-btn {
+  align-self: flex-end;
+  padding: 6px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text2);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pangram-copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pangram-copy-btn.copied { border-color: var(--accent3); color: var(--accent3); }
+
+@media (max-width: 600px) {
+  /* LAYOUT */
+  header { padding: 12px 14px 0; }
+  main { padding: 12px 12px 90px; } /* space for bottom bar */
+  .grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; }
+  .symbol { font-size: 28px; min-height: 40px; }
+  .box { padding: 16px 8px 10px; border-radius: 12px; gap: 8px; }
+  .copy-btn, .info-btn { font-size: 10px; padding: 5px 0; }
+  .section-title { font-size: 12px; }
+  .subcat-btn { font-size: 11px; padding: 5px 10px; }
+
+  /* HEADER TOP: stack logo + buttons */
+  .header-top { gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .logo { font-size: 18px; }
+  .logo-sub { display: none; }
+  .back-menu-btn { padding: 7px 10px; font-size: 12px; }
+  .search-trigger-btn { padding: 7px 10px; font-size: 12px; }
+  .search-trigger-btn span.btn-label { display: none; }
+
+  /* HIDE FIXED BUTTONS (go to mobile bar) */
+  .share-btn, .download-btn, .report-btn { display: none !important; }
+
+  /* TABS */
+  .tab-btn { padding: 7px 12px; font-size: 12px; }
+
+  /* MODAL: full-screen */
+  #info-modal { padding: 0; align-items: flex-end; }
+  .modal-card {
+    border-radius: 20px 20px 0 0;
+    max-width: 100%;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px 20px 36px;
+  }
+  .modal-symbol { font-size: 56px; padding: 14px; }
+  .modal-copy-row { grid-template-columns: 1fr 1fr; }
+
+  /* SEARCH POPUP: full-screen-ish */
+  #search-popup-overlay { padding: 10px 10px 0; align-items: flex-start; }
+  .search-popup-card {
+    border-radius: 20px 20px 0 0;
+    max-width: 100%;
+    width: 100%;
+    max-height: 88svh;
+  }
+  .search-popup-results { max-height: 48svh; }
+  #pangram-popup-overlay { padding: 0; align-items: flex-end; }
+  #pangram-popup-overlay .search-popup-card { border-radius: 20px 20px 0 0; max-width:100%; }
+
+  /* SHARE POPUP */
+  #share-popup { right: 8px; left: 8px; width: auto; }
+
+  /* INICIO PANEL */
+  #tools-panel .stats-grid { grid-template-columns: repeat(3, 1fr); }
+  .converter-output-grid { grid-template-columns: 1fr; }
+  .history-clear-btn { font-size: 10px; padding: 4px 10px; }
+}
+
+@media (max-width: 380px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); }
+  .symbol { font-size: 24px; }
+  .header-top { gap: 6px; }
+  #tools-panel .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── MOBILE BOTTOM BAR ───────────────────────────────────────── */
+.mobile-bar {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: color-mix(in srgb, var(--bg2) 92%, transparent);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 8px 16px max(10px, env(safe-area-inset-bottom));
+  gap: 6px;
+  z-index: 200;
+  justify-content: space-around;
+  align-items: center;
+}
+.mobile-bar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  color: var(--text2);
+  font-family: 'Syne', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: color 0.15s, background 0.15s;
+  text-decoration: none;
+  min-width: 52px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.mobile-bar-btn:hover, .mobile-bar-btn.active-tab {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.mobile-bar-btn svg { width: 20px; height: 20px; }
+
+@media (max-width: 600px) {
+  .mobile-bar { display: flex; }
+}
+
+  /* ── STARFIELD ── */
+  @keyframes twinkle { 0%,100%{opacity:0.15} 50%{opacity:0.9} }
+  .stars { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+  .stars::before, .stars::after {
+    content:""; position:absolute; inset:0;
+    background-image:
+      radial-gradient(1px 1px at 10% 15%,rgba(255,255,255,.8) 0%,transparent 100%),
+      radial-gradient(1px 1px at 25% 40%,rgba(255,255,255,.6) 0%,transparent 100%),
+      radial-gradient(1.5px 1.5px at 40% 8%,rgba(255,255,255,.9) 0%,transparent 100%),
+      radial-gradient(1px 1px at 55% 60%,rgba(255,255,255,.7) 0%,transparent 100%),
+      radial-gradient(1px 1px at 70% 20%,rgba(255,255,255,.8) 0%,transparent 100%),
+      radial-gradient(1.5px 1.5px at 80% 75%,rgba(255,255,255,.9) 0%,transparent 100%),
+      radial-gradient(1px 1px at 90% 35%,rgba(255,255,255,.6) 0%,transparent 100%),
+      radial-gradient(1px 1px at 15% 80%,rgba(255,255,255,.7) 0%,transparent 100%),
+      radial-gradient(1px 1px at 35% 90%,rgba(180,210,255,.8) 0%,transparent 100%),
+      radial-gradient(1px 1px at 65% 50%,rgba(255,255,255,.8) 0%,transparent 100%),
+      radial-gradient(1px 1px at 48% 28%,rgba(200,220,255,.9) 0%,transparent 100%),
+      radial-gradient(1px 1px at 78% 55%,rgba(200,200,255,.8) 0%,transparent 100%),
+      radial-gradient(1.5px 1.5px at 5% 55%,rgba(255,255,255,.7) 0%,transparent 100%),
+      radial-gradient(1px 1px at 92% 10%,rgba(255,255,255,.9) 0%,transparent 100%),
+      radial-gradient(1px 1px at 60% 85%,rgba(180,210,255,.8) 0%,transparent 100%);
+    animation: twinkle 4s ease-in-out infinite;
+  }
+  .stars::after {
+    background-image:
+      radial-gradient(1px 1px at 20% 30%,rgba(255,255,255,.6) 0%,transparent 100%),
+      radial-gradient(1px 1px at 45% 70%,rgba(255,255,255,.8) 0%,transparent 100%),
+      radial-gradient(1.5px 1.5px at 62% 12%,rgba(255,255,255,.9) 0%,transparent 100%),
+      radial-gradient(1px 1px at 85% 45%,rgba(255,255,255,.7) 0%,transparent 100%),
+      radial-gradient(1px 1px at 3% 92%,rgba(255,255,255,.8) 0%,transparent 100%),
+      radial-gradient(1px 1px at 30% 60%,rgba(200,220,255,.6) 0%,transparent 100%),
+      radial-gradient(1px 1px at 72% 32%,rgba(255,255,255,.9) 0%,transparent 100%),
+      radial-gradient(1.5px 1.5px at 50% 50%,rgba(180,200,255,.5) 0%,transparent 100%),
+      radial-gradient(1px 1px at 88% 88%,rgba(255,255,255,.7) 0%,transparent 100%),
+      radial-gradient(1px 1px at 18% 48%,rgba(255,255,255,.8) 0%,transparent 100%);
+    animation: twinkle 6s ease-in-out infinite reverse;
+  }
+
+  /* ── HISTORY TIMESTAMP ── */
+  .history-item { display:flex; flex-direction:column; gap:4px; }
+  .history-ts {
+    font-family:'DM Mono',monospace;
+    font-size:9px;
+    color:var(--text2);
+    text-align:center;
+    letter-spacing:0.2px;
+    opacity:0.75;
+    line-height:1.2;
+  }
+  .history-clear-btn {
+    padding:5px 12px;
+    border:1.5px solid var(--border);
+    border-radius:8px;
+    background:var(--surface);
+    color:var(--text2);
+    font-family:'DM Mono',monospace;
+    font-size:11px;
+    cursor:pointer;
+    transition:all 0.15s;
+    white-space:nowrap;
+  }
+  .history-clear-btn:hover { border-color:#ef4444; color:#ef4444; }
+
+  /* ── FAV STAR ── */
+  .fav-star-btn {
+    position:absolute; top:6px; right:6px;
+    background:none; border:none; cursor:pointer;
+    font-size:14px; padding:2px; line-height:1;
+    color: color-mix(in srgb, var(--border) 80%, transparent);
+    transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1), color 0.15s, filter 0.2s;
+    z-index:2;
+  }
+  .fav-star-btn:hover {
+    transform:scale(1.35) !important;
+    color:#f59e0b;
+    filter: drop-shadow(0 0 5px rgba(245,158,11,0.7));
+  }
+  .fav-star-btn.starred {
+    color:#f59e0b;
+    filter: drop-shadow(0 0 4px rgba(245,158,11,0.55));
+  }
+  .fav-star-btn.starred:hover {
+    filter: drop-shadow(0 0 8px rgba(245,158,11,0.9));
+  }
+
+  /* ── TEXT CONVERTER ── */
+  .converter-output-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+    gap:10px;
+    margin-top:12px;
+  }
+  .converter-style-card {
+    background:var(--surface2);
+    border:1.5px solid var(--border);
+    border-radius:12px;
+    padding:12px 14px;
+    display:flex; flex-direction:column; gap:6px;
+    transition:border-color 0.15s, box-shadow 0.15s;
+  }
+  .converter-style-card:hover { border-color:var(--accent); box-shadow:0 4px 12px var(--shadow); }
+  .converter-style-name {
+    font-family:'DM Mono',monospace;
+    font-size:9px; color:var(--text2);
+    text-transform:uppercase; letter-spacing:0.7px;
+  }
+  .converter-style-row { display:flex; align-items:center; gap:8px; }
+  .converter-style-preview {
+    font-size:17px; color:var(--text);
+    word-break:break-all; flex:1; min-height:26px;
+  }
+  .converter-copy-btn-sm {
+    padding:4px 10px;
+    border:1.5px solid var(--border);
+    border-radius:7px;
+    background:var(--surface);
+    color:var(--text2);
+    font-family:'DM Mono',monospace; font-size:10px;
+    cursor:pointer; white-space:nowrap;
+    transition:all 0.15s; flex-shrink:0;
+  }
+  .converter-copy-btn-sm:hover { border-color:var(--accent); color:var(--accent); }
+  .converter-copy-btn-sm.copied { border-color:var(--accent3); color:var(--accent3); }
+
+  /* ── STATS ── */
+  .stats-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+    gap:12px;
+  }
+  .stat-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:18px 12px;
+    text-align:center;
+  }
+  .stat-value {
+    font-family:'DM Mono',monospace;
+    font-size:30px; font-weight:700;
+    color:var(--accent); line-height:1;
+    margin-bottom:6px;
+  }
+  .stat-label {
+    font-size:10px; color:var(--text2);
+    letter-spacing:0.5px; text-transform:uppercase;
+  }
+  .stat-sym { font-size:26px; line-height:1; margin-bottom:4px; }
+
+  /* ── NEW FEATURES ── */
+  .tool-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px}
+  .tool-input{padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);font-family:'DM Mono',monospace;font-size:14px;outline:none;transition:border-color .2s;width:100%}
+  .tool-input:focus{border-color:var(--accent)}
+  .tool-output{padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);font-family:'DM Mono',monospace;font-size:13px;min-height:44px;word-break:break-all;line-height:1.6;white-space:pre-wrap}
+  .tool-btn{padding:8px 18px;border:1.5px solid var(--accent);border-radius:9px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px}
+  .tool-btn:hover{background:var(--accent);color:#fff}
+  .tool-btn.danger{border-color:#ef4444;color:#ef4444;background:color-mix(in srgb,#ef4444 10%,transparent)}
+  .tool-btn.danger:hover{background:#ef4444;color:#fff}
+  .tool-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .tag{display:inline-block;padding:2px 8px;border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;background:color-mix(in srgb,var(--accent2) 18%,transparent);color:var(--accent2);margin:2px}
+  .quiz-sym{font-size:80px;text-align:center;padding:18px;background:var(--bg2);border-radius:16px;cursor:default;line-height:1}
+  .quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .quiz-opt{padding:10px 8px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;transition:all .15s;text-align:center}
+  .quiz-opt:hover{border-color:var(--accent);color:var(--accent)}
+  .quiz-opt.correct{border-color:#22c55e!important;background:color-mix(in srgb,#22c55e 18%,transparent)!important;color:#22c55e!important}
+  .quiz-opt.wrong{border-color:#ef4444!important;background:color-mix(in srgb,#ef4444 14%,transparent)!important;color:#ef4444!important}
+  .inspect-char{display:inline-flex;flex-direction:column;align-items:center;gap:4px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;transition:border-color .15s}
+  .inspect-char:hover{border-color:var(--accent)}
+  .inspect-char .ic-sym{font-size:28px;line-height:1}
+  .inspect-char .ic-code{font-family:'DM Mono',monospace;font-size:9px;color:var(--text2)}
+
+  /* ── MODO COMPACTO ── */
+  body.compact-mode .grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 6px;
+  }
+  body.compact-mode .box {
+    padding: 10px 6px 8px;
+    border-radius: 10px;
+    gap: 6px;
+  }
+  body.compact-mode .symbol { font-size: 28px; min-height: 34px; }
+  body.compact-mode .sym-name { font-size: 7px; max-height: 20px; }
+  body.compact-mode .copy-btn, body.compact-mode .info-btn { font-size: 9px; padding: 4px 0; }
+
+  /* ── SIZE SLIDER ── */
+  .size-slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+  }
+  .size-slider-wrap label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+  .size-slider {
+    flex: 1;
+    accent-color: var(--accent);
+    cursor: pointer;
+    max-width: 120px;
+  }
+
+  /* ── RECENT SEARCHES ── */
+  .recent-searches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 28px 0;
+    flex-shrink: 0;
+  }
+  .recent-chip {
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .recent-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .recent-chip-sym { font-size: 14px; }
+
+  /* ── SEARCH RESULT COUNT ── */
+  .search-result-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text2);
+    padding: 0 28px 8px;
+    flex-shrink: 0;
+    display: none;
+  }
+  .search-result-count.show { display: block; }
+
+  /* ── FONT GREEK/IPA ── */
+  .font-greek { font-family: 'Noto Sans', 'Segoe UI Symbol', sans-serif; }
+  .font-ipa   { font-family: 'Noto Sans', 'Segoe UI Symbol', sans-serif; font-size: 36px !important; }
+
+  /* ── TOOLBAR EXTRA ── */
+  .toolbar-extra {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 6px 28px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .toolbar-extra-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .toolbar-extra-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .toolbar-extra-btn.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+
+  /* ── SYMBOL OF THE DAY CARD ── */
+  .sotd-card {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--surface2)), var(--surface2));
+    border: 1.5px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    border-radius: 18px;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .sotd-sym {
+    font-size: 80px;
+    line-height: 1;
+    text-align: center;
+    padding: 16px;
+    background: var(--bg2);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform .2s cubic-bezier(.34,1.56,.64,1);
+  }
+  .sotd-sym:hover { transform: scale(1.06); }
+  .sotd-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .sotd-meta-item {
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .sotd-meta-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .sotd-meta-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    word-break: break-all;
+  }
+
+  /* ── COPY-ALL BTN ── */
+  .copy-all-btn {
+    padding: 6px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .copy-all-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-all-btn.copied { border-color: #22c55e; color: #22c55e; }
+
+  /* ── UNIVERSAL BUTTON SPRING ── */
+  button:not(:disabled), a.card, a.dl-btn, a.back, a.back-menu-btn,
+  .search-trigger-btn, .share-btn, .download-btn, .report-btn,
+  .modal-copy-btn, .pangram-copy-btn, .share-copy-btn, a.share-link,
+  .pwa-install-btn {
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease, background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s !important;
+  }
+  button:not(:disabled):hover { transform: scale(1.05) !important; }
+  button:not(:disabled):active, a.dl-btn:active { transform: scale(0.95) !important; transition-duration: 0.07s !important; }
+
+</style>
+</head>
+<body>
+<div class="stars"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- DOWNLOAD BUTTON -->
+<a href="download.html" class="download-btn" title="Descargar">
+  <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+    <polyline points="7 10 12 15 17 10"/>
+    <line x1="12" y1="15" x2="12" y2="3"/>
+  </svg>
+</a>
+
+<!-- REPORT BUTTON -->
+<a href="https://forms.gle/HCF2tjbRc9FgTPc89" target="_blank" class="report-btn" title="Denunciar">
+  <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+  </svg>
+</a>
+
+<!-- SHARE BUTTON -->
+<button class="share-btn" id="share-btn">
+  <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+  </svg>
+  Compartir
+</button>
+
+<!-- SHARE POPUP -->
+<div id="share-popup">
+  <div class="share-popup-title">Enlace de esta página</div>
+  <div class="share-url">simbolos.pages.dev/simbolos.html</div>
+  <button class="share-copy-btn" id="share-copy-btn">Copiar enlace</button>
+  <hr class="share-divider">
+  <div class="share-other-title">Nuestras otras páginas</div>
+  <div class="share-links">
+    <a class="share-link" href="https://catacatalogologo.pages.dev" target="_blank">catacatalogologo.pages.dev</a>
+    <a class="share-link" href="https://catalogopetardos.pages.dev" target="_blank">catalogopetardos.pages.dev</a>
+    <a class="share-link" href="https://sites.google.com/colegioelcarmenindautxu.com/los-los-el-reto-de-los-sedenta/p%C3%A1gina-principal-home" target="_blank">El reto de los sedentarios</a>
+  </div>
+</div>
+
+<header>
+  <div class="header-top">
+    <div class="logo">Símbo<span>los</span><div class="logo-sub">Hecho por Jesse He con colaboración de 2 IAs</div></div>
+
+    <a href="index.html" class="back-menu-btn">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      Menú
+    </a>
+
+    <button class="search-trigger-btn" id="search-trigger-btn" title="Buscar por Unicode">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <span class="btn-label">Buscar Unicode</span>
+    </button>
+
+    <button class="search-trigger-btn" id="pangram-trigger-btn" title="Pangramas">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+        <path d="M4 6h16M4 12h16M4 18h10"/>
+      </svg>
+      <span class="btn-label">Pangramas</span>
+    </button>
+    <button class="search-trigger-btn" id="random-sym-btn" title="Símbolo aleatorio">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+        <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+        <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+      </svg>
+      <span class="btn-label">Aleatorio</span>
+    </button>
+  </div>
+
+  <div class="tabs-wrap">
+  <div class="tabs" id="main-tabs">
+    <div class="tab-indicator" id="main-tab-indicator"></div>
+    <a href="tools.html" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;background:color-mix(in srgb,var(--accent) 12%,transparent);border:1.5px solid color-mix(in srgb,var(--accent) 30%,transparent);color:var(--accent);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0;transition:background .15s,transform .2s cubic-bezier(.34,1.56,.64,1)" onmouseover="this.style.background='color-mix(in srgb,var(--accent) 22%,transparent)';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='color-mix(in srgb,var(--accent) 12%,transparent)';this.style.transform=''">🛠 Tools</a>
+    <button class="tab-btn" data-tab="welcome">👋 Inicio</button>
+    <button class="tab-btn active" data-tab="music">Música</button>
+    <button class="tab-btn" data-tab="math">Matemáticos</button>
+    <button class="tab-btn" data-tab="arrows">Flechas</button>
+    <button class="tab-btn" data-tab="geo">Geométricos</button>
+    <button class="tab-btn" data-tab="misc">Miscelánea</button>
+    <button class="tab-btn" data-tab="dingbats">Dingbats</button>
+    <button class="tab-btn" data-tab="emoji">Emoji</button>
+    <button class="tab-btn" data-tab="transport">Transporte</button>
+    <button class="tab-btn" data-tab="latin">Latin</button>
+    <button class="tab-btn" data-tab="currency">Monedas</button>
+    <button class="tab-btn" data-tab="enclosed">Encerrados</button>
+    <button class="tab-btn" data-tab="cjk">CJK 中文</button>
+    <button class="tab-btn" data-tab="ancient">Antiguos</button>
+    <button class="tab-btn" data-tab="especiales">✦ Especiales</button>
+    <button class="tab-btn" data-tab="greek">Α Griego</button>
+    <button class="tab-btn" data-tab="ipa">🗣 IPA</button>
+    <button class="tab-btn" data-tab="visual">🔍 Visual</button>
+  </div>
+  </div>
+
+  <!-- TOOLBAR EXTRA -->
+  <div class="toolbar-extra" id="toolbar-extra">
+    <button class="toolbar-extra-btn" id="compact-toggle-btn" title="Modo compacto">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Compacto
+    </button>
+    <div class="size-slider-wrap">
+      <label for="sym-size-slider">Tamaño</label>
+      <input type="range" id="sym-size-slider" class="size-slider" min="24" max="72" value="42" step="4">
+    </div>
+    <button class="toolbar-extra-btn" id="copy-all-fav-btn" title="Copiar todos los favoritos">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M20 2H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/><path d="M4 6H2v14a2 2 0 0 0 2 2h14v-2H4V6z"/></svg>
+      Copiar favoritos
+    </button>
+    <button class="toolbar-extra-btn" id="copy-all-hist-btn" title="Copiar historial">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Copiar historial
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <div id="normal-content">
+
+    <div class="subcat-strip" id="subcat-strip"></div>
+
+    <!-- Music -->
+    <div id="music-main" class="subtab-content"><p class="section-title">Símbolos musicales</p><div class="grid" id="music-grid"></div></div>
+
+    <!-- Math -->
+    <div id="math-ops" class="subtab-content"><p class="section-title">Operadores matemáticos</p><div class="grid" id="math-ops-grid"></div></div>
+    <div id="math-sets" class="subtab-content"><p class="section-title">Conjuntos numéricos</p><div class="grid" id="math-sets-grid"></div></div>
+    <div id="math-vars" class="subtab-content"><p class="section-title">Variables</p><div class="grid" id="math-vars-grid"></div></div>
+    <div id="math-a" class="subtab-content"><p class="section-title">Símbolos matemáticos A</p><div class="grid" id="math-a-grid"></div></div>
+    <div id="math-b" class="subtab-content"><p class="section-title">Símbolos matemáticos B</p><div class="grid" id="math-b-grid"></div></div>
+    <div id="math-sup" class="subtab-content"><p class="section-title">Suplementarios</p><div class="grid" id="math-sup-grid"></div></div>
+
+    <!-- Arrows -->
+    <div id="arr-basic" class="subtab-content"><p class="section-title">Flechas básicas</p><div class="grid" id="arr-basic-grid"></div></div>
+    <div id="arr-a" class="subtab-content"><p class="section-title">Flechas suplementarias A</p><div class="grid" id="arr-a-grid"></div></div>
+    <div id="arr-b" class="subtab-content"><p class="section-title">Flechas suplementarias B</p><div class="grid" id="arr-b-grid"></div></div>
+    <div id="arr-misc" class="subtab-content"><p class="section-title">Flechas varias</p><div class="grid" id="arr-misc-grid"></div></div>
+
+    <!-- Geo -->
+    <div id="geo-shapes" class="subtab-content"><p class="section-title">Formas geométricas</p><div class="grid" id="geo-shapes-grid"></div></div>
+    <div id="geo-blocks" class="subtab-content"><p class="section-title">Bloques</p><div class="grid" id="geo-blocks-grid"></div></div>
+    <div id="geo-box" class="subtab-content"><p class="section-title">Box Drawing</p><div class="grid" id="geo-box-grid"></div></div>
+
+    <!-- Especiales -->
+    <div id="esp-runas" class="subtab-content"><p class="section-title">Runas Éldar</p><div class="grid" id="esp-runas-grid"></div></div>
+    <div id="esp-alquimia" class="subtab-content"><p class="section-title">Alquimia &amp; Astrología</p><div class="grid" id="esp-alquimia-grid"></div></div>
+    <div id="esp-domino" class="subtab-content"><p class="section-title">Dominó</p><div class="grid" id="esp-domino-grid"></div></div>
+    <div id="esp-mahjong" class="subtab-content"><p class="section-title">Mahjong</p><div class="grid" id="esp-mahjong-grid"></div></div>
+    <div id="esp-juegos" class="subtab-content"><p class="section-title">Dados &amp; Juegos</p><div class="grid" id="esp-juegos-grid"></div></div>
+    <div id="esp-misc2" class="subtab-content"><p class="section-title">Miscelánea II</p><div class="grid" id="esp-misc2-grid"></div></div>
+
+    <!-- Greek -->
+    <div id="greek-basic"    class="subtab-content"><p class="section-title">Alfabeto Griego (mayúsculas y minúsculas)</p><div class="grid" id="greek-basic-grid"></div></div>
+    <div id="greek-symbols"  class="subtab-content"><p class="section-title">Símbolos griegos y copias matemáticas</p><div class="grid" id="greek-symbols-grid"></div></div>
+    <div id="greek-archaic"  class="subtab-content"><p class="section-title">Griego arcaico y epigráfico</p><div class="grid" id="greek-archaic-grid"></div></div>
+
+    <!-- IPA -->
+    <div id="ipa-vowels"     class="subtab-content"><p class="section-title">Vocales IPA</p><div class="grid" id="ipa-vowels-grid"></div></div>
+    <div id="ipa-consonants" class="subtab-content"><p class="section-title">Consonantes IPA</p><div class="grid" id="ipa-consonants-grid"></div></div>
+    <div id="ipa-diacritics" class="subtab-content"><p class="section-title">Diacríticos y suprasegmentales IPA</p><div class="grid" id="ipa-diacritics-grid"></div></div>
+    <div id="ipa-tones"      class="subtab-content"><p class="section-title">Tonos y marcas prosódicas</p><div class="grid" id="ipa-tones-grid"></div></div>
+
+    <!-- Visual search panel -->
+
+    <div id="visual-panel" class="subtab-content">
+      <p class="section-title">🔍 Buscador visual por categoría de forma</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px" id="visual-filter-btns"></div>
+      <input id="visual-search-input" class="tool-input" placeholder="Filtra por nombre, ej: circle, star, arrow…" style="margin-bottom:14px;max-width:380px;font-family:'DM Mono',monospace" oninput="visualFilter()">
+      <div class="grid" id="visual-results-grid"></div>
+      <div id="visual-empty" style="display:none;font-family:'DM Mono',monospace;font-size:13px;color:var(--text2);padding:20px 0">No se encontraron símbolos.</div>
+    </div>
+
+    <!-- Welcome panel -->
+    <div id="welcome-panel" class="subtab-content">
+      <div style="max-width:640px;display:flex;flex-direction:column;gap:20px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:18px;padding:28px 24px">
+          <div style="font-size:48px;margin-bottom:12px">∑</div>
+          <h2 style="font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px">Bienvenido a Símbolos</h2>
+          <p style="font-size:13px;color:var(--text2);line-height:1.7">Tu catálogo de caracteres Unicode — música, matemáticas, flechas, emoji, escrituras antiguas y mucho más. Haz clic en cualquier símbolo para copiarlo, inspeccionarlo o añadirlo a favoritos.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px" id="welcome-cards"></div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:18px 20px">
+          <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Símbolo aleatorio del día</p>
+          <div style="display:flex;align-items:center;gap:16px">
+            <span id="welcome-random-sym" style="font-size:52px;cursor:pointer;line-height:1" title="Haz clic para copiar"></span>
+            <div>
+              <div id="welcome-random-name" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)"></div>
+              <div id="welcome-random-cp" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent)"></div>
+            </div>
+
+          </div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);text-align:center">
+          Hecho por Jesse He · v5.2.86 · 2026 · <a href="https://simbolos.pages.dev" style="color:var(--accent);text-decoration:none">simbolos.pages.dev</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Misc -->
+    <div id="misc-tech" class="subtab-content"><p class="section-title">Técnicos</p><div class="grid" id="misc-tech-grid"></div></div>
+    <div id="misc-sym" class="subtab-content"><p class="section-title">Símbolos varios</p><div class="grid" id="misc-sym-grid"></div></div>
+    <div id="misc-zodiac" class="subtab-content"><p class="section-title">Zodiaco</p><div class="grid" id="misc-zodiac-grid"></div></div>
+    <div id="misc-astro" class="subtab-content"><p class="section-title">Astronómicos</p><div class="grid" id="misc-astro-grid"></div></div>
+
+    <!-- Dingbats -->
+    <div id="ding-classic" class="subtab-content"><p class="section-title">Dingbats clásicos</p><div class="grid" id="ding-classic-grid"></div></div>
+    <div id="ding-orn" class="subtab-content"><p class="section-title">Dingbats ornamentales</p><div class="grid" id="ding-orn-grid"></div></div>
+
+    <!-- Emoji -->
+    <div id="emo-face" class="subtab-content"><p class="section-title">Emoticonos</p><div class="grid" id="emo-face-grid"></div></div>
+    <div id="emo-pict" class="subtab-content"><p class="section-title">Pictogramas</p><div class="grid" id="emo-pict-grid"></div></div>
+    <div id="emo-sup" class="subtab-content"><p class="section-title">Suplementarios</p><div class="grid" id="emo-sup-grid"></div></div>
+
+    <!-- Transport -->
+    <div id="trans-main" class="subtab-content"><p class="section-title">Transporte</p><div class="grid" id="trans-main-grid"></div></div>
+    <div id="trans-sign" class="subtab-content"><p class="section-title">Señales</p><div class="grid" id="trans-sign-grid"></div></div>
+
+    <!-- Latin -->
+    <div id="lat-ext" class="subtab-content"><p class="section-title">Latin Extendido A/B</p><div class="grid" id="lat-ext-grid"></div></div>
+    <div id="lat-ctrl" class="subtab-content"><p class="section-title">Caracteres de Control C0</p><div class="grid" id="lat-ctrl-grid"></div></div>
+    <div id="lat-ctrl2" class="subtab-content"><p class="section-title">Caracteres de Control C1</p><div class="grid" id="lat-ctrl2-grid"></div></div>
+
+    <!-- Currency -->
+    <div id="cur-main" class="subtab-content"><p class="section-title">Símbolos de Moneda</p><div class="grid" id="cur-main-grid"></div></div>
+
+    <!-- Enclosed -->
+    <div id="enc-alphanum" class="subtab-content"><p class="section-title">Alfanuméricos Encerrados</p><div class="grid" id="enc-alphanum-grid"></div></div>
+    <div id="enc-roman" class="subtab-content"><p class="section-title">Números Romanos</p><div class="grid" id="enc-roman-grid"></div></div>
+    <div id="enc-letter" class="subtab-content"><p class="section-title">Letras Circuladas</p><div class="grid" id="enc-letter-grid"></div></div>
+
+    <!-- Extra math grids -->
+    <div id="math-super" class="subtab-content"><p class="section-title">Superíndices y Subíndices</p><div class="grid" id="math-super-grid"></div></div>
+    <div id="math-frac" class="subtab-content"><p class="section-title">Fracciones y Romanos</p><div class="grid" id="math-frac-grid"></div></div>
+
+    <!-- Extra geo grids -->
+    <div id="geo-braille" class="subtab-content"><p class="section-title">Braille</p><div class="grid" id="geo-braille-grid"></div></div>
+
+    <!-- Extra misc grids -->
+    <div id="misc-chess" class="subtab-content"><p class="section-title">Ajedrez y Dados</p><div class="grid" id="misc-chess-grid"></div></div>
+    <div id="misc-cards" class="subtab-content"><p class="section-title">Cartas y Juegos</p><div class="grid" id="misc-cards-grid"></div></div>
+
+    <!-- CJK -->
+    <div id="cjk-basic" class="subtab-content">
+      <p class="section-title">CJK Unificado (U+4E00–U+9FFF) — 20.902 caracteres</p>
+      <div class="grid" id="cjk-basic-grid"></div>
+      <div id="cjk-sentinel" style="height:1px"></div>
+    </div>
+    <div id="cjk-ext-a" class="subtab-content">
+      <p class="section-title">CJK Extensión A (U+3400–U+4DBF)</p>
+      <div class="grid" id="cjk-ext-a-grid"></div>
+      <div id="cjk-ext-a-sentinel" style="height:1px"></div>
+    </div>
+    <div id="cjk-radicals" class="subtab-content">
+      <p class="section-title">Radicales Kangxi (U+2F00–U+2FDF)</p>
+      <div class="grid" id="cjk-radicals-grid"></div>
+    </div>
+    <div id="cjk-compat" class="subtab-content">
+      <p class="section-title">Compatibilidad CJK (U+F900–U+FAFF)</p>
+      <div class="grid" id="cjk-compat-grid"></div>
+      <div id="cjk-compat-sentinel" style="height:1px"></div>
+    </div>
+
+    <!-- Ancient scripts -->
+    <div id="anc-oldeng"    class="subtab-content"><p class="section-title">Inglés Antiguo / Anglo-Saxon (þ ð Æ ƿ ȝ...)</p><div class="grid" id="anc-oldeng-grid"></div></div>
+    <div id="anc-norse"     class="subtab-content"><p class="section-title">Nórdico (Ø Å Æ ß Ŋ...)</p><div class="grid" id="anc-norse-grid"></div></div>
+    <div id="anc-runic"     class="subtab-content"><p class="section-title">Rúnico Elder Futhark (ᚠᚢᚦᚨ...)</p><div class="grid" id="anc-runic-grid"></div></div>
+    <div id="anc-gothic"    class="subtab-content"><p class="section-title">Gótico de Ulfilas (𐌰𐌱𐌲...)</p><div class="grid" id="anc-gothic-grid"></div></div>
+    <div id="anc-medieval"  class="subtab-content"><p class="section-title">Latin Medieval (ꝑꝓꝙꝛ Ꜳ ꜵ...)</p><div class="grid" id="anc-medieval-grid"></div></div>
+    <div id="anc-ogham"     class="subtab-content"><p class="section-title">Ogham (Céltico / Irlandés)</p><div class="grid" id="anc-ogham-grid"></div></div>
+    <div id="anc-glagol"    class="subtab-content"><p class="section-title">Glagolítico (Eslavo antiguo)</p><div class="grid" id="anc-glagol-grid"></div></div>
+    <div id="anc-coptic"    class="subtab-content"><p class="section-title">Copto (Egipcio cristiano)</p><div class="grid" id="anc-coptic-grid"></div></div>
+    <div id="anc-armenian"  class="subtab-content"><p class="section-title">Armenio</p><div class="grid" id="anc-armenian-grid"></div></div>
+    <div id="anc-georgian"  class="subtab-content"><p class="section-title">Georgiano (Mkhedruli + Asomtavruli)</p><div class="grid" id="anc-georgian-grid"></div></div>
+    <div id="anc-greek-ext" class="subtab-content"><p class="section-title">Griego extendido (politónico)</p><div class="grid" id="anc-greek-ext-grid"></div></div>
+  </div>
+</main>
+
+<!-- SEARCH POPUP -->
+<div id="search-popup-overlay">
+  <div class="search-popup-card">
+    <div class="search-type-tabs">
+      <button class="search-type-tab active" data-mode="hex">Hex U+</button>
+      <button class="search-type-tab" data-mode="dec">Decimal</button>
+      <button class="search-type-tab" data-mode="char">Carácter</button>
+      <button class="search-type-tab" data-mode="name">Nombre</button>
+    </div>
+    <div class="search-input-row">
+      <div class="search-prefix" id="search-prefix">U+</div>
+      <input type="text" id="search-popup-input" placeholder="ej. 2665" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search">
+      <button onclick="closeSearchPopup()" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;color:var(--text2);width:50px;height:50px;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:border-color .15s,color .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">✕</button>
+    </div>
+    <div class="search-hint" id="search-hint">
+      <span>Introduce un código hexadecimal Unicode, ej. <b>2665</b> → ♥</span>
+      <span><kbd>Esc</kbd> para cerrar</span>
+    </div>
+    <div class="recent-searches" id="recent-searches"></div>
+    <div class="search-result-count" id="search-result-count"></div>
+    <div class="search-popup-results">
+      <div class="search-loading" id="search-loading">Cargando</div>
+      <div class="search-popup-grid" id="search-popup-grid"></div>
+      <div class="search-popup-no-results" id="search-popup-no-results">Sin resultados</div>
+    </div>
+  </div>
+</div>
+
+<!-- PANGRAMAS POPUP -->
+<div id="pangram-popup-overlay">
+  <div class="search-popup-card" style="max-width:600px">
+    <div class="search-type-tabs" id="pangram-lang-tabs">
+      <button class="search-type-tab active" data-lang="es">🇪🇸 Español</button>
+      <button class="search-type-tab" data-lang="en">🇬🇧 English</button>
+      <button class="search-type-tab" data-lang="fr">🇫🇷 Français</button>
+      <button class="search-type-tab" data-lang="de">🇩🇪 Deutsch</button>
+      <button class="search-type-tab" data-lang="pt">🇵🇹 Português</button>
+      <button class="search-type-tab" data-lang="it">🇮🇹 Italiano</button>
+    </div>
+    <div style="padding:18px 20px 6px; display:flex; align-items:center; justify-content:space-between;">
+      <span style="font-family:'Syne',sans-serif; font-size:13px; font-weight:600; color:var(--text2); letter-spacing:0.4px;">PANGRAMAS</span>
+      <button id="pangram-close-btn" style="border:none;background:var(--surface2);color:var(--text2);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div id="pangram-list" style="padding:0 16px 20px; display:flex; flex-direction:column; gap:10px;"></div>
+  </div>
+</div>
+
+<!-- INFO MODAL -->
+<div id="info-modal">
+  <div class="modal-card">
+    <button class="modal-close" id="modal-close">✕</button>
+    <div class="modal-symbol font-symbols" id="modal-symbol"></div>
+    <div class="modal-grid">
+      <div class="modal-row">
+        <span class="modal-label">Carácter</span>
+        <span class="modal-value" id="modal-char"></span>
+      </div>
+      <div class="modal-row">
+        <span class="modal-label">Nombre</span>
+        <span class="modal-value" id="modal-name"></span>
+      </div>
+      <div class="modal-row">
+        <span class="modal-label">Unicode</span>
+        <span class="modal-value" id="modal-unicode"></span>
+      </div>
+      <div class="modal-row">
+        <span class="modal-label">HTML Dec</span>
+        <span class="modal-value" id="modal-html-dec"></span>
+      </div>
+      <div class="modal-row">
+        <span class="modal-label">HTML Hex</span>
+        <span class="modal-value" id="modal-html-hex"></span>
+      </div>
+      <div class="modal-row">
+        <span class="modal-label">CSS</span>
+        <span class="modal-value" id="modal-css"></span>
+      </div>
+      <div class="modal-row">
+        <span class="modal-label">JS</span>
+        <span class="modal-value" id="modal-js"></span>
+      </div>
+    </div>
+    <div class="modal-copy-row">
+      <button class="modal-copy-btn" id="modal-copy-char">Copiar símbolo</button>
+      <button class="modal-copy-btn" id="modal-copy-html">Copiar HTML</button>
+      <button class="modal-copy-btn" id="modal-copy-css">Copiar CSS</button>
+      <button class="modal-copy-btn" id="modal-copy-unicode">Copiar U+code</button>
+      <button class="modal-copy-btn" id="modal-copy-py">Python \N{}</button>
+      <button class="modal-copy-btn" id="modal-copy-json">JSON \uXXXX</button>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="modal-fav-btn" id="modal-fav-btn" style="flex:1">★ Añadir a favoritos</button>
+      <button class="modal-fav-btn" id="modal-share-btn" style="flex:1;background:color-mix(in srgb,var(--accent) 12%,transparent);border-color:color-mix(in srgb,var(--accent) 30%,transparent);color:var(--accent)" onclick="(function(){ const sym=document.getElementById('modal-symbol').textContent.trim(); const cp=window._modalCurrentCp||0; const name=document.getElementById('modal-name').textContent.trim(); if(typeof shareSymbol==='function') shareSymbol(sym,cp,name); else if(navigator.share) navigator.share({title:sym+' '+name,text:sym+'\n'+name,url:location.href}); else navigator.clipboard?.writeText(sym); })()">↗ Compartir</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── UNICODE NAME LOOKUP ────────────────────────────────────── */
+// UN is populated dynamically from UnicodeData.txt at page load
+const UN = {};
+
+/* ── LOAD UnicodeData.txt AND PARSE NAMES ───────────────────── */
+let unicodeDataReady = false;
+let renderQueue = []; // functions to call once data is ready
+
+async function loadUnicodeData() {
+  try {
+    const resp = await fetch("UnicodeData.txt");
+    if (!resp.ok) throw new Error("No se pudo cargar UnicodeData.txt");
+    const text = await resp.text();
+    const lines = text.split("\n");
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const parts = line.split(";");
+      const cp = parseInt(parts[0], 16);
+      let name = parts[1];
+      // For <control> entries, the real name is in field 10 (index 10)
+      if (name === "<control>" || name.startsWith("<")) {
+        const alt = parts[10];
+        if (alt && alt.trim()) name = alt.trim();
+        else name = "CONTROL U+" + parts[0];
+      }
+      if (name && !name.startsWith("<")) {
+        UN[cp] = name;
+      }
+    }
+    unicodeDataReady = true;
+    // Re-render all name labels now that data is loaded
+    document.querySelectorAll(".sym-name[data-cp]").forEach(el => {
+      const cp = parseInt(el.dataset.cp, 10);
+      el.textContent = getUnicodeName(cp);
+    });
+  } catch (e) {
+    console.warn("UnicodeData.txt no disponible, usando nombres de respaldo.", e);
+    unicodeDataReady = true;
+  }
+}
+loadUnicodeData();
+
+
+// getUnicodeName: returns the name from UN (populated from UnicodeData.txt) or a fallback
+function getUnicodeName(cp) {
+  if (UN[cp]) return UN[cp];
+  // CJK ranges — Unicode no les da nombres individuales, se generan por convención
+  if (cp >= 0x4E00  && cp <= 0x9FFF)  return "CJK U+" + cp.toString(16).toUpperCase();
+  if (cp >= 0x3400  && cp <= 0x4DBF)  return "CJK EXT-A U+" + cp.toString(16).toUpperCase();
+  if (cp >= 0x20000 && cp <= 0x2A6DF) return "CJK EXT-B U+" + cp.toString(16).toUpperCase();
+  if (cp >= 0xF900  && cp <= 0xFAFF)  return "CJK COMPAT U+" + cp.toString(16).toUpperCase();
+  if (cp >= 0x2F00  && cp <= 0x2FDF)  return "KANGXI RADICAL U+" + cp.toString(16).toUpperCase();
+  return "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
+}
+
+/* ── SYMBOL HISTORY ─────────────────────────────────────────── */
+const history = JSON.parse(localStorage.getItem('sym_history') || '[]');
+// Migrate old entries without timestamps
+history.forEach(h => { if (!h.ts) h.ts = Date.now(); });
+
+let totalCopied = parseInt(localStorage.getItem('sym_total_copied') || '0', 10);
+
+function relativeTime(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return 'hace ' + diff + 's';
+  if (diff < 3600) return 'hace ' + Math.floor(diff/60) + ' min';
+  if (diff < 86400) return 'hace ' + Math.floor(diff/3600) + ' h';
+  if (diff < 172800) return 'ayer';
+  const d = new Date(ts);
+  return d.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'2-digit' });
+}
+
+function addToHistory(sym, cp, fontClass) {
+  const idx = history.findIndex(h => h.sym === sym);
+  if (idx > -1) history.splice(idx, 1);
+  history.unshift({ sym, cp, fontClass, ts: Date.now() });
+  if (history.length > 30) history.pop();
+  localStorage.setItem('sym_history', JSON.stringify(history));
+  totalCopied++;
+  localStorage.setItem('sym_total_copied', totalCopied);
+  if (document.getElementById('tools-panel')?.style.display !== 'none') {
+    renderHistory();
+    renderStats();
+  }
+}
+function renderHistory() {
+  const grid = document.getElementById('history-grid');
+  const empty = document.getElementById('history-empty');
+  if (!grid || !empty) return;
+  if (!history.length) { empty.style.display=''; grid.querySelectorAll('.history-item').forEach(b=>b.remove()); return; }
+  empty.style.display = 'none';
+  grid.querySelectorAll('.history-item').forEach(b => b.remove());
+  history.forEach(({ sym, cp, fontClass, ts }) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'history-item';
+    const box = createBox(sym, cp, fontClass);
+    box.style.position = 'relative';
+    // Star button on the box
+    const star = document.createElement('button');
+    star.className = 'fav-star-btn' + (isFav(sym) ? ' starred' : '');
+    star.title = isFav(sym) ? 'Quitar de favoritos' : 'Añadir a favoritos';
+    star.textContent = '★';
+    star.onclick = (e) => { e.stopPropagation(); toggleFav(sym, cp, fontClass, star); };
+    box.appendChild(star);
+    const tsDiv = document.createElement('div');
+    tsDiv.className = 'history-ts';
+    tsDiv.textContent = relativeTime(ts || Date.now());
+    wrapper.appendChild(box);
+    wrapper.appendChild(tsDiv);
+    grid.appendChild(wrapper);
+  });
+}
+
+/* ── INICIO TAB ─────────────────────────────────────────────── */
+const TOOLS_SUBCATS = [{ id:'tools-panel', name:'Tools' }];
+
+/* ── FAVORITES ──────────────────────────────────────────────── */
+let favorites = JSON.parse(localStorage.getItem('sym_favorites') || '[]');
+
+function isFav(sym) { return favorites.some(f => f.sym === sym); }
+
+function saveFavorites() { localStorage.setItem('sym_favorites', JSON.stringify(favorites)); }
+
+function toggleFav(sym, cp, fontClass, starBtn) {
+  if (isFav(sym)) {
+    favorites = favorites.filter(f => f.sym !== sym);
+    starBtn && (starBtn.className = 'fav-star-btn', starBtn.title = 'Añadir a favoritos');
+  } else {
+    favorites.unshift({ sym, cp, fontClass });
+    starBtn && (starBtn.className = 'fav-star-btn starred', starBtn.title = 'Quitar de favoritos');
+  }
+  saveFavorites();
+  renderFavorites();
+  renderHistory(); // refresh star states
+}
+
+function renderFavorites() {
+  const grid = document.getElementById('fav-grid');
+  if (!grid) return;
+  const empty = document.getElementById('fav-empty');
+  if (!favorites.length) { empty.style.display=''; grid.querySelectorAll('.history-item').forEach(b=>b.remove()); return; }
+  empty.style.display = 'none';
+  grid.querySelectorAll('.history-item').forEach(b => b.remove());
+  favorites.forEach(({ sym, cp, fontClass }) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'history-item';
+    const box = createBox(sym, cp, fontClass);
+    box.style.position = 'relative';
+    const star = document.createElement('button');
+    star.className = 'fav-star-btn starred';
+    star.title = 'Quitar de favoritos';
+    star.textContent = '★';
+    star.onclick = (e) => { e.stopPropagation(); toggleFav(sym, cp, fontClass, star); };
+    box.appendChild(star);
+    wrapper.appendChild(box);
+    grid.appendChild(wrapper);
+  });
+}
+
+/* ── UNICODE TEXT CONVERTER ─────────────────────────────────── */
+const CONV_STYLES = [
+  { name: 'Normal',        fn: s => s },
+  { name: 'Negrita',       fn: s => [...s].map(c => {
+    const cp = c.codePointAt(0);
+    if (cp >= 65 && cp <= 90)  return String.fromCodePoint(cp - 65 + 0x1D400);
+    if (cp >= 97 && cp <= 122) return String.fromCodePoint(cp - 97 + 0x1D41A);
+    if (cp >= 48 && cp <= 57)  return String.fromCodePoint(cp - 48 + 0x1D7CE);
+    return c;
+  }).join('') },
+  { name: 'Cursiva',       fn: s => [...s].map(c => {
+    const cp = c.codePointAt(0);
+    if (cp >= 65 && cp <= 90)  return String.fromCodePoint(cp - 65 + 0x1D434);
+    if (cp >= 97 && cp <= 122) {
+      if (cp === 104) return '\u210E'; // h
+      return String.fromCodePoint(cp - 97 + 0x1D44E);
+    }
+    return c;
+  }).join('') },
+  { name: 'Negrita cursiva', fn: s => [...s].map(c => {
+    const cp = c.codePointAt(0);
+    if (cp >= 65 && cp <= 90)  return String.fromCodePoint(cp - 65 + 0x1D468);
+    if (cp >= 97 && cp <= 122) return String.fromCodePoint(cp - 97 + 0x1D482);
+    return c;
+  }).join('') },
+  { name: 'Caligráfica',   fn: s => [...s].map(c => {
+    const cp = c.codePointAt(0);
+    if (cp >= 65 && cp <= 90)  return String.fromCodePoint(cp - 65 + 0x1D49C);
+    if (cp >= 97 && cp <= 122) return String.fromCodePoint(cp - 97 + 0x1D4B6);
+    return c;
+  }).join('') },
+  { name: 'Fraktur',       fn: s => [...s].map(c => {
+    const cp = c.codePointAt(0);
+    if (cp >= 65 && cp <= 90)  return String.fromCodePoint(cp - 65 + 0x1D504);
+    if (cp >= 97 && cp <= 122) return String.fromCodePoint(cp - 97 + 0x1D51E);
+    return c;
+  }).join('') },
+  { name: 'Doble trazo',   fn: s => [...s].map(c => {
+    const cp = c.codePointAt(0);
+    if (cp >= 65 && cp <= 90)  return String.fromCodePoint(cp - 65 + 0x1D538);
+    if (cp >= 97 && cp <= 122) return String.fromCodePoint(cp - 97 + 0x1D552);
+    if (cp >= 48 && cp <= 57)  return String.fromCodePoint(cp - 48 + 0x1D7D8);
+    return c;
+  }).join('') },
+  { name: 'Monoespaciado', fn: s => [...s].map(c => {
+    const cp = c.codePointAt(0);
+    if (cp >= 65 && cp <= 90)  return String.fromCodePoint(cp - 65 + 0x1D670);
+    if (cp >= 97 && cp <= 122) return String.fromCodePoint(cp - 97 + 0x1D68A);
+    if (cp >= 48 && cp <= 57)  return String.fromCodePoint(cp - 48 + 0x1D7F6);
+    return c;
+  }).join('') },
+  { name: 'Circled',       fn: s => [...s].map(c => {
+    const cp = c.codePointAt(0);
+    if (cp >= 65 && cp <= 90)  return String.fromCodePoint(cp - 65 + 0x24B6);
+    if (cp >= 97 && cp <= 122) return String.fromCodePoint(cp - 97 + 0x24D0);
+    if (cp >= 49 && cp <= 57)  return String.fromCodePoint(cp - 49 + 0x2460);
+    if (cp === 48) return '\u24EA';
+    return c;
+  }).join('') },
+  { name: 'Subrayado',     fn: s => [...s].map(c => c + '\u0332').join('') },
+  { name: 'Tachado',       fn: s => [...s].map(c => c + '\u0336').join('') },
+  { name: 'Puntos arriba', fn: s => [...s].map(c => c + '\u0308').join('') },
+  { name: 'Pequeñas caps', fn: s => s.toUpperCase().split('').map(c => {
+    const map = {A:'ᴬ',B:'ᴮ',C:'ᶜ',D:'ᴰ',E:'ᴱ',F:'ᶠ',G:'ᴳ',H:'ᴴ',I:'ᴵ',J:'ᴶ',K:'ᴷ',L:'ᴸ',M:'ᴹ',N:'ᴺ',O:'ᴼ',P:'ᴾ',R:'ᴿ',S:'ˢ',T:'ᵀ',U:'ᵁ',V:'ᵛ',W:'ᵂ'};
+    return map[c] || c;
+  }).join('') },
+  { name: 'Al revés',      fn: s => [...s].reverse().join('') },
+  { name: 'Espacio amplio', fn: s => [...s].join('\u2009') },
+];
+
+function updateConverter() {
+  const convEl = document.getElementById('converter-input'); if(!convEl) return; const input = convEl.value;
+  const out = document.getElementById('converter-output');
+  if (!out) return;
+  out.innerHTML = '';
+  if (!input) return;
+  CONV_STYLES.forEach(style => {
+    let converted;
+    try { converted = style.fn(input); } catch { converted = input; }
+    const card = document.createElement('div');
+    card.className = 'converter-style-card';
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'converter-style-name';
+    nameDiv.textContent = style.name;
+    const row = document.createElement('div');
+    row.className = 'converter-style-row';
+    const preview = document.createElement('div');
+    preview.className = 'converter-style-preview';
+    preview.textContent = converted;
+    const btn = document.createElement('button');
+    btn.className = 'converter-copy-btn-sm';
+    btn.textContent = 'Copiar';
+    btn.onclick = () => copyWithFeedback(converted, btn);
+    row.appendChild(preview);
+    row.appendChild(btn);
+    card.appendChild(nameDiv);
+    card.appendChild(row);
+    out.appendChild(card);
+  });
+}
+/* ── STATS ──────────────────────────────────────────────────── */
+function renderStats() {
+  const grid = document.getElementById('stats-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const addCard = (value, label, extra='') => {
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    if (extra) { const s = document.createElement('div'); s.className = 'stat-sym'; s.textContent = extra; card.appendChild(s); }
+    const v = document.createElement('div'); v.className = 'stat-value'; v.textContent = value; card.appendChild(v);
+    const l = document.createElement('div'); l.className = 'stat-label'; l.textContent = label; card.appendChild(l);
+    grid.appendChild(card);
+  };
+
+  addCard(totalCopied, 'Total copiados');
+  addCard(history.length, 'En historial');
+  addCard(favorites.length, 'Favoritos');
+
+  if (history.length) {
+    const last = history[0];
+    addCard(last.sym, 'Último copiado');
+  }
+
+  // Unique categories (approximate by font class)
+  const cats = new Set(history.map(h => h.fontClass || 'default'));
+  addCard(cats.size, 'Categorías usadas');
+}
+
+/* ── HISTORY CLEAR BUTTON ───────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  const clearBtn = document.getElementById('history-clear-btn');
+  if (clearBtn) clearBtn.addEventListener('click', () => {
+    if (!confirm('¿Borrar todo el historial?')) return;
+    history.length = 0;
+    localStorage.removeItem('sym_history');
+    renderHistory && renderHistory();
+    renderStats && renderStats();
+  });
+  const ci = document.getElementById('converter-input');
+  if (ci) ci.addEventListener('input', updateConverter);
+  const expBtn = document.getElementById('export-hist-btn');
+  if (expBtn) expBtn.addEventListener('click', exportHistory);
+  const fci = document.getElementById('fontcomp-input');
+  if (fci) fci.addEventListener('input', updateFontComp);
+  const ii = document.getElementById('inspect-input');
+  if (ii) ii.addEventListener('input', updateInspector);
+});
+
+
+const DIACRITICS = [
+  { name:'Grave',       cp:0x0300, sym:'\u0300' },
+  { name:'Acute',       cp:0x0301, sym:'\u0301' },
+  { name:'Circumflex',  cp:0x0302, sym:'\u0302' },
+  { name:'Tilde',       cp:0x0303, sym:'\u0303' },
+  { name:'Macron',      cp:0x0304, sym:'\u0304' },
+  { name:'Breve',       cp:0x0306, sym:'\u0306' },
+  { name:'Dot above',   cp:0x0307, sym:'\u0307' },
+  { name:'Diaeresis',   cp:0x0308, sym:'\u0308' },
+  { name:'Ring above',  cp:0x030A, sym:'\u030A' },
+  { name:'Double acute',cp:0x030B, sym:'\u030B' },
+  { name:'Caron',       cp:0x030C, sym:'\u030C' },
+  { name:'Cedilla',     cp:0x0327, sym:'\u0327' },
+  { name:'Ogonek',      cp:0x0328, sym:'\u0328' },
+  { name:'Stroke',      cp:0x0336, sym:'\u0336' },
+  { name:'Dot below',   cp:0x0323, sym:'\u0323' },
+  { name:'Line below',  cp:0x0332, sym:'\u0332' },
+  { name:'Hook above',  cp:0x0309, sym:'\u0309' },
+  { name:'Horn',        cp:0x031B, sym:'\u031B' },
+];
+const selectedDiacs = [];
+
+function renderDiacSuggestions(filter='') {
+  const box = document.getElementById('diac-suggestions');
+  if (!box) return;
+  const fl = filter.toLowerCase();
+  const hexMatch = filter.match(/^(?:u\+?)?([0-9a-f]{2,4})$/i);
+  let list = DIACRITICS;
+  if (hexMatch) {
+    const cp = parseInt(hexMatch[1], 16);
+    list = DIACRITICS.filter(d => d.cp === cp);
+    if (!list.length && cp >= 0x0300 && cp <= 0x036F) {
+      list = [{ name:'U+'+cp.toString(16).toUpperCase(), cp, sym:String.fromCodePoint(cp) }];
+    }
+  } else if (fl) {
+    list = DIACRITICS.filter(d => d.name.toLowerCase().includes(fl));
+  }
+  box.innerHTML = '';
+  list.slice(0,12).forEach(d => {
+    if (false) return; // allow duplicates
+    const btn = document.createElement('button');
+    btn.className = 'subcat-btn';
+    btn.style.cssText = 'font-family:"DM Mono",monospace;font-size:12px';
+    btn.title = d.name;
+    btn.textContent = 'a'+d.sym + ' ' + d.name;
+    btn.onclick = () => addDiac(d);
+    box.appendChild(btn);
+  });
+}
+
+function addDiac(d) {
+  const entry = { cp: d.cp, sym: d.sym };
+  selectedDiacs.push(entry);
+  // render chip
+  const chips = document.getElementById('diac-chips');
+  const chip = document.createElement('span');
+  chip.dataset.cp = d.cp;
+  chip.style.cssText = 'background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);border-radius:6px;padding:3px 8px;font-family:"DM Mono",monospace;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px';
+  chip.innerHTML = 'a'+d.sym+' <small style="opacity:.7">'+d.name+'</small> ✕';
+  chip.onclick = () => {
+    const i = selectedDiacs.indexOf(entry);
+    if (i > -1) selectedDiacs.splice(i, 1);
+    chip.remove();
+    updateCombiner();
+  };
+  const ds2=document.getElementById('diac-search');
+  if(ds2){chips.insertBefore(chip,ds2);ds2.value='';}
+  renderDiacSuggestions();
+  updateCombiner();
+}
+
+function updateCombiner() {
+  const base = document.getElementById('comb-base').value.trim();
+  const diacStr = selectedDiacs.map(d=>d.sym).join('');
+  const box = document.getElementById('comb-result-box');
+  if (!box) return;
+  const ph = document.getElementById('comb-placeholder');
+  if (!base) {
+    box.style.display = 'none'; ph.style.display = '';
+    {const _e=document.getElementById('comb-preview');if(_e)_e.textContent='\u00A0';}
+    {const _e=document.getElementById('comb-result-text');if(_e)_e.textContent='—';}
+    return;
+  }
+  box.style.display = 'flex'; ph.style.display = 'none';
+  const firstChar = [...base][0];
+  const combined = firstChar + diacStr;
+  const cp2=document.getElementById('comb-preview'); if(cp2) cp2.textContent = combined;
+  const codes = 'U+'+firstChar.codePointAt(0).toString(16).toUpperCase().padStart(4,'0')
+    + (selectedDiacs.length ? ' + ' + selectedDiacs.map(d=>'U+'+d.cp.toString(16).toUpperCase().padStart(4,'0')).join('+') : '');
+  const crt=document.getElementById('comb-result-text'); if(crt) crt.textContent = codes;
+}
+
+function combInfo() {
+  const base = document.getElementById('comb-base').value.trim();
+  if (!base) return;
+  const firstChar = [...base][0];
+  const diacStr = selectedDiacs.map(d=>d.sym).join('');
+  openModal(firstChar + diacStr, firstChar.codePointAt(0), '');
+}
+
+function combCopy() {
+  const base = document.getElementById('comb-base').value.trim();
+  const diacStr = selectedDiacs.map(d=>d.sym).join('');
+  if (!base) return;
+  const result = [...base].map(c=>c+diacStr).join('');
+  addToHistory(result, result.codePointAt(0), '');
+  copyWithFeedback(result, document.getElementById('comb-copy-btn'));
+}
+{const ds=document.getElementById('diac-search');if(ds){ds.addEventListener('input',e=>renderDiacSuggestions(e.target.value));ds.addEventListener('focus',()=>renderDiacSuggestions(ds.value));}}
+renderDiacSuggestions();
+
+
+const SUBCATS = {
+  music:     [{ id:"music-main",   name:"Símbolos musicales" }],
+  math:      [{ id:"math-ops",     name:"Operadores" },
+              { id:"math-sets",    name:"Conjuntos" },
+              { id:"math-vars",    name:"Variables" },
+              { id:"math-a",       name:"Símbolos A" },
+              { id:"math-b",       name:"Símbolos B" },
+              { id:"math-sup",     name:"Suplementarios" },
+              { id:"math-super",   name:"Superíndices" },
+              { id:"math-frac",    name:"Fracciones" }],
+  arrows:    [{ id:"arr-basic",    name:"Básicas" },
+              { id:"arr-a",        name:"Supl. A" },
+              { id:"arr-b",        name:"Supl. B" },
+              { id:"arr-misc",     name:"Varias" }],
+  geo:       [{ id:"geo-shapes",   name:"Formas" },
+              { id:"geo-blocks",   name:"Bloques" },
+              { id:"geo-box",      name:"Box Drawing" },
+              { id:"geo-braille",  name:"Braille" }],
+  misc:      [{ id:"misc-tech",    name:"Técnicos" },
+              { id:"misc-sym",     name:"Varios" },
+              { id:"misc-zodiac",  name:"Zodiaco" },
+              { id:"misc-astro",   name:"Astronómicos" },
+              { id:"misc-chess",   name:"Ajedrez" },
+              { id:"misc-cards",   name:"Cartas" }],
+  dingbats:  [{ id:"ding-classic", name:"Clásicos" },
+              { id:"ding-orn",     name:"Ornamentales" }],
+  emoji:     [{ id:"emo-face",     name:"Emoticonos" },
+              { id:"emo-pict",     name:"Pictogramas" },
+              { id:"emo-sup",      name:"Suplementarios" }],
+  transport: [{ id:"trans-main",   name:"Transporte" },
+              { id:"trans-sign",   name:"Señales" }],
+  latin:     [{ id:"lat-ext",      name:"Latin Extendido" },
+              { id:"lat-ctrl",     name:"Control C0" },
+              { id:"lat-ctrl2",    name:"Control C1" }],
+  currency:  [{ id:"cur-main",     name:"Monedas" }],
+  enclosed:  [{ id:"enc-alphanum", name:"Alfanuméricos" },
+              { id:"enc-roman",    name:"Números romanos" },
+              { id:"enc-letter",   name:"Letras circuladas" }],
+  cjk:       [{ id:"cjk-basic",    name:"CJK Básico" },
+              { id:"cjk-ext-a",    name:"Extensión A" },
+              { id:"cjk-radicals", name:"Radicales Kangxi" },
+              { id:"cjk-compat",   name:"Compatibilidad" }],
+  especiales:[{ id:"esp-runas",    name:"Runas" },
+              { id:"esp-alquimia", name:"Alquimia" },
+              { id:"esp-domino",   name:"Dominó" },
+              { id:"esp-mahjong",  name:"Mahjong" },
+              { id:"esp-juegos",   name:"Juegos" },
+              { id:"esp-misc2",    name:"Miscelánea II" }],
+  visual:    [{ id:"visual-panel", name:"Buscar por forma" }],
+  welcome:   [{ id:"welcome-panel", name:"Bienvenida" }],
+  ancient:   [{ id:"anc-oldeng",    name:"Old English" },
+              { id:"anc-norse",     name:"Nórdico" },
+              { id:"anc-runic",     name:"Rúnico" },
+              { id:"anc-gothic",    name:"Gótico Ulfilas" },
+              { id:"anc-medieval",  name:"Latin Medieval" },
+              { id:"anc-ogham",     name:"Ogham" },
+              { id:"anc-glagol",    name:"Glagolítico" },
+              { id:"anc-coptic",    name:"Copto" },
+              { id:"anc-armenian",  name:"Armenio" },
+              { id:"anc-georgian",  name:"Georgiano" },
+              { id:"anc-greek-ext", name:"Griego ext." }],
+  greek:     [{ id:"greek-basic",    name:"Alfabeto" },
+              { id:"greek-symbols",  name:"Símbolos" },
+              { id:"greek-archaic",  name:"Arcaico" }],
+  ipa:       [{ id:"ipa-vowels",     name:"Vocales" },
+              { id:"ipa-consonants", name:"Consonantes" },
+              { id:"ipa-diacritics", name:"Diacríticos" },
+              { id:"ipa-tones",      name:"Tonos" }],
+};
+
+/* ── SYMBOL INDEX (for search) ─────────────────────────────── */
+const allSymbols = []; // { sym, cp, fontClass }
+
+/* ── SYMBOL GENERATION ─────────────────────────────────────── */
+function createBox(sym, cp, fontClass = "", noCopy = false) {
+  const box = document.createElement("div");
+  box.className = "box";
+
+  const symDiv = document.createElement("div");
+  symDiv.className = "symbol " + fontClass;
+  symDiv.textContent = sym;
+
+  const nameDiv = document.createElement("div");
+  nameDiv.className = "sym-name";
+  nameDiv.dataset.cp = cp;
+  nameDiv.textContent = getUnicodeName(cp);
+
+  const actions = document.createElement("div");
+  actions.className = "box-actions";
+
+  const copyBtn = document.createElement("button");
+  copyBtn.className = "copy-btn";
+  if (noCopy) {
+    copyBtn.textContent = "No copiable";
+    copyBtn.disabled = true;
+    copyBtn.style.opacity = "0.4";
+    copyBtn.style.cursor = "not-allowed";
+  } else {
+    copyBtn.textContent = "Copiar";
+  }
+
+  const infoBtn = document.createElement("button");
+  infoBtn.className = "info-btn";
+  infoBtn.textContent = "Info";
+
+  if (!noCopy) {
+    copyBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      addToHistory(sym, cp, fontClass);
+      copyWithFeedback(sym, copyBtn);
+    });
+  }
+
+  infoBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openModal(sym, cp, fontClass, noCopy);
+  });
+
+  box.addEventListener("click", () => openModal(sym, cp, fontClass, noCopy));
+
+  // ── FAV STAR on every box ──
+  const starBtn = document.createElement("button");
+  starBtn.dataset.sym = sym;
+  starBtn.className = "fav-star-btn" + (isFav(sym) ? " starred" : "");
+  starBtn.title = isFav(sym) ? "Quitar de favoritos" : "Añadir a favoritos";
+  starBtn.textContent = "★";
+  starBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleFav(sym, cp, fontClass, starBtn);
+    // sync all star buttons for same sym visible on page
+    document.querySelectorAll(".fav-star-btn[data-sym='" + sym.replace(/'/g,"") + "']").forEach(b => {
+      b.className = "fav-star-btn" + (isFav(sym) ? " starred" : "");
+      b.title = isFav(sym) ? "Quitar de favoritos" : "Añadir a favoritos";
+    });
+  });
+
+  actions.appendChild(copyBtn);
+  actions.appendChild(infoBtn);
+  box.appendChild(symDiv);
+  box.appendChild(nameDiv);
+  box.appendChild(actions);
+  box.appendChild(starBtn);
+  return box;
+}
+
+function addSymbolToGrid(sym, cp, gridId, fontClass = "", noCopy = false) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  const box = createBox(sym, cp, fontClass, noCopy);
+  grid.appendChild(box);
+  allSymbols.push({ sym, cp, fontClass });
+}
+
+function generateSymbols(start, end, gridId, fontClass = "") {
+  for (let cp = start; cp <= end; cp++) {
+    try {
+      const sym = String.fromCodePoint(cp);
+      addSymbolToGrid(sym, cp, gridId, fontClass);
+    } catch {}
+  }
+}
+
+/* ── COPY WITH FEEDBACK ────────────────────────────────────── */
+function copyWithFeedback(text, btn) {
+  const prev = btn.textContent;
+
+  function onSuccess() {
+    btn.textContent = "✓";
+    btn.classList.add("copied");
+    setTimeout(() => {
+      btn.textContent = prev;
+      btn.classList.remove("copied");
+    }, 1200);
+  }
+
+  function onFail() {
+    btn.textContent = "✗";
+    setTimeout(() => { btn.textContent = prev; }, 1200);
+  }
+
+  function fallback() {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;top:-999px;left:-999px;opacity:0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      ok ? onSuccess() : onFail();
+    } catch { onFail(); }
+  }
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(onSuccess).catch(fallback);
+  } else {
+    fallback();
+  }
+}
+
+/* ── INFO MODAL ────────────────────────────────────────────── */
+function openModal(sym, cp, fontClass, noCopy = false) {
+  window._modalCurrentCp = cp;
+  const hex = cp.toString(16).toUpperCase().padStart(4, "0");
+  (document.getElementById("modal-symbol") || {}).textContent = sym;
+  document.getElementById("modal-symbol").className = "modal-symbol " + fontClass;
+  (document.getElementById("modal-char") || {}).textContent = sym;
+  (document.getElementById("modal-name") || {}).textContent = getUnicodeName(cp);
+  (document.getElementById("modal-unicode") || {}).textContent = "U+" + hex;
+  (document.getElementById("modal-html-dec") || {}).textContent = "&#" + cp + ";";
+  (document.getElementById("modal-html-hex") || {}).textContent = "&#x" + hex + ";";
+  (document.getElementById("modal-css") || {}).textContent = "\\" + hex;
+  (document.getElementById("modal-js") || {}).textContent = "\\u{" + hex + "}";
+
+  const copyCharBtn = document.getElementById("modal-copy-char");
+  if (noCopy) {
+    copyCharBtn.textContent = "No copiable";
+    copyCharBtn.disabled = true;
+    copyCharBtn.style.opacity = "0.4";
+    copyCharBtn.style.cursor = "not-allowed";
+    copyCharBtn.onclick = null;
+  } else {
+    copyCharBtn.textContent = "Copiar símbolo";
+    copyCharBtn.disabled = false;
+    copyCharBtn.style.opacity = "";
+    copyCharBtn.style.cursor = "";
+    copyCharBtn.onclick = () => copyWithFeedback(sym, copyCharBtn);
+  }
+
+  document.getElementById("modal-copy-html").onclick    = () => copyWithFeedback("&#x" + hex + ";", document.getElementById("modal-copy-html"));
+  document.getElementById("modal-copy-css").onclick     = () => copyWithFeedback("\\" + hex, document.getElementById("modal-copy-css"));
+  document.getElementById("modal-copy-unicode").onclick = () => copyWithFeedback("U+" + hex, document.getElementById("modal-copy-unicode"));
+
+  document.getElementById("modal-copy-py").onclick     = () => copyWithFeedback("\\N{" + getUnicodeName(cp) + "}", document.getElementById("modal-copy-py"));
+  document.getElementById("modal-copy-json").onclick   = () => { const j = cp > 0xFFFF ? "\\u{"+hex+"}" : "\\u"+hex.padStart(4,"0"); copyWithFeedback(j, document.getElementById("modal-copy-json")); };
+
+  // ── FAV BUTTON in modal ──
+  const favBtn = document.getElementById("modal-fav-btn");
+  function updateModalFavBtn() {
+    const f = isFav(sym);
+    favBtn.textContent = f ? "★ Quitar de favoritos" : "★ Añadir a favoritos";
+    favBtn.classList.toggle("fav-active", f);
+  }
+  updateModalFavBtn();
+  favBtn.onclick = () => {
+    toggleFav(sym, cp, fontClass, null);
+    updateModalFavBtn();
+    // sync grid stars
+    document.querySelectorAll(".fav-star-btn").forEach(b => {
+      if (b.dataset.sym === sym) {
+        b.className = "fav-star-btn" + (isFav(sym) ? " starred" : "");
+        b.title = isFav(sym) ? "Quitar de favoritos" : "Añadir a favoritos";
+      }
+    });
+  };
+
+  document.getElementById("info-modal").classList.add("open");
+}
+
+document.getElementById("modal-close").onclick = () =>
+  document.getElementById("info-modal").classList.remove("open");
+
+document.getElementById("info-modal").addEventListener("click", (e) => {
+  if (e.target === document.getElementById("info-modal"))
+    document.getElementById("info-modal").classList.remove("open");
+});
+
+/* ── PANGRAMAS ─────────────────────────────────────────────── */
+const PANGRAMAS = {
+  es: [
+    { text: "El veloz murciélago hindú comía feliz cardillo y kiwi. La cigüeña tocaba el saxofón detrás del palenque de paja.", note: "Pangrama clásico en español" },
+    { text: "Benjamín pidió una bebida de kiwi y fresa; Noé, sin vergüenza, la más exquisita champaña del menú.", note: "Contiene todas las letras del abecedario" },
+    { text: "Queda gazpacho, fibra de vidrio, wok, jet y un xilófono.", note: "Pangrama corto" },
+    { text: "Jovencillo emponzoñado de whisky, ¡qué figura exhibe!", note: "Muy compacto, 36 caracteres" },
+    { text: "Wamba, rey godo de hispania, exigió flúor, zinc y berquio para su éxquimo.", note: "Con letras poco comunes" },
+  ],
+  en: [
+    { text: "The quick brown fox jumps over the lazy dog.", note: "Classic English pangram" },
+    { text: "Pack my box with five dozen liquor jugs.", note: "Only 32 characters" },
+    { text: "How vexingly quick daft zebras jump!", note: "35 characters" },
+    { text: "The five boxing wizards jump quickly.", note: "36 characters" },
+    { text: "Sphinx of black quartz, judge my vow.", note: "Short and elegant" },
+  ],
+  fr: [
+    { text: "Portez ce vieux whisky au juge blond qui fume sur son yacht.", note: "Pangrama clásico en francés" },
+    { text: "Le cœur déçu mais l'âme plutôt naïve, Louÿs rêva de crapaüter en canoë au delà des îles, près du mälström où brûlent les novæ.", note: "Con todas las letras y diacríticos" },
+    { text: "Buvez de ce whisky que le patron juge fameux.", note: "Variante corta" },
+    { text: "Voix ambiguë d'un cœur qui au zéphyr préfère les jattes de kiwis.", note: "Con caracteres franceses especiales" },
+  ],
+  de: [
+    { text: "Victor jagt zwölf Boxkämpfer quer über den großen Sylter Deich.", note: "Pangrama alemán clásico" },
+    { text: "Falsches Üben von Xylophonmusik quält jeden größeren Zwerg.", note: "Con Ü, Ö y ß" },
+    { text: "Heizölrückstoßabdämpfung — längst bekanntes Wort!", note: "Ejemplo con todos los umlauts" },
+    { text: "Zwölf Boxkämpfer jagten Eva quer über den Sylter Deich.", note: "Variante compacta" },
+  ],
+  pt: [
+    { text: "A rápida raposa marrom saltou sobre o cachorro preguiçoso.", note: "Adaptación portuguesa" },
+    { text: "Vejo xá, kiwi, jogo, whisky, bafão, quê e fuzil.", note: "Con letras especiales del portugués" },
+    { text: "Zebras caolhas de Java querem manjar figs úmidas.", note: "Pangrama compacto portugués" },
+    { text: "Um pequeno jabuti xereta viu dez cegonhas felizes.", note: "Con cedilha y acentos" },
+  ],
+  it: [
+    { text: "Ma la volpe, col suo balzo, ha raggiunto il quieto Fido.", note: "Pangrama italiano clásico" },
+    { text: "Che bel giorno! Quel pazzo vecchio Xavier suonava a jive con grande foga.", note: "Con todas las letras incluidas j, k, x" },
+    { text: "Quei fez sbagliati da voi con legno xilofonico.", note: "Versión compacta italiana" },
+  ],
+};
+
+let pangramLang = "es";
+const pangramOverlay = document.getElementById("pangram-popup-overlay");
+const pangramList    = document.getElementById("pangram-list");
+
+function renderPangramList() {
+  if(!pangramList) return;
+  pangramList.innerHTML = "";
+  PANGRAMAS[pangramLang].forEach(({ text, note }) => {
+    const card = document.createElement("div");
+    card.className = "pangram-card";
+
+    const p = document.createElement("div");
+    p.className = "pangram-text";
+    p.textContent = text;
+
+    const meta = document.createElement("div");
+    meta.className = "pangram-meta";
+    meta.textContent = note;
+
+    const btn = document.createElement("button");
+    btn.className = "pangram-copy-btn";
+    btn.textContent = "Copiar";
+    btn.addEventListener("click", () => copyWithFeedback(text, btn));
+
+    card.appendChild(p);
+    card.appendChild(meta);
+    card.appendChild(btn);
+    pangramList.appendChild(card);
+  });
+}
+
+document.getElementById("pangram-trigger-btn").addEventListener("click", () => {
+  pangramOverlay.classList.add("open");
+  renderPangramList();
+});
+
+document.getElementById("pangram-close-btn").addEventListener("click", () => {
+  pangramOverlay.classList.remove("open");
+});
+
+pangramOverlay.addEventListener("click", (e) => {
+  if (e.target === pangramOverlay) pangramOverlay.classList.remove("open");
+});
+
+document.querySelectorAll("#pangram-lang-tabs .search-type-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll("#pangram-lang-tabs .search-type-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    pangramLang = tab.dataset.lang;
+    renderPangramList();
+  });
+});
+
+/* ── RANDOM SYMBOL ──────────────────────────────────────────── */
+function openRandomSymbol() {
+  if (!allSymbols.length) return;
+  const item = allSymbols[Math.floor(Math.random() * allSymbols.length)];
+  openModal(item.sym, item.cp, item.fontClass);
+}
+document.getElementById('random-sym-btn').addEventListener('click', openRandomSymbol);
+
+/* ── MOBILE BAR WIRING ──────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function() {
+  const mobInicio  = document.getElementById('mob-inicio-btn'); // may be null in new layout
+  const mobSearch  = document.getElementById('mob-search-btn');
+  const mobRandom  = document.getElementById('mob-random-btn');
+  const mobShare   = document.getElementById('mob-share-btn');
+
+  function updateMobActive(tab) {
+    [mobInicio].forEach(b => b && b.classList.remove('active-tab'));
+    if (tab === 'tools' && mobInicio) mobInicio.classList.add('active-tab');
+  }
+
+  if (mobInicio)  mobInicio.addEventListener('click',  () => { activateTab('tools'); updateMobActive('tools'); });
+  if (mobSearch)  mobSearch.addEventListener('click',  () => {
+    document.getElementById('search-popup-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('search-popup-input').focus(), 150);
+  });
+  if (mobRandom)  mobRandom.addEventListener('click',  openRandomSymbol);
+  if (mobShare)   mobShare.addEventListener('click',   (e) => {
+    e.stopPropagation();
+    document.getElementById('share-popup').classList.toggle('open');
+  });
+});
+
+/* ── EXPORT HISTORY ─────────────────────────────────────────── */
+function exportHistory() {
+  if (!history.length) return;
+  const lines = history.map(h => {
+    const hex = 'U+' + h.cp.toString(16).toUpperCase().padStart(4,'0');
+    const ts  = h.ts ? new Date(h.ts).toLocaleString('es-ES') : '';
+    return h.sym + '  ' + hex + '  ' + (getUnicodeName ? getUnicodeName(h.cp) : '') + (ts ? '  [' + ts + ']' : '');
+  }).join('\n');
+  copyWithFeedback(lines, document.getElementById('export-hist-btn'));
+}
+
+/* ── FONT COMPARISON (in Inicio tab) ────────────────────────── */
+const COMP_FONTS = [
+  { name: 'Noto Music',          cls: 'font-music' },
+  { name: 'Noto Sans Math',      cls: 'font-math' },
+  { name: 'Noto Sans Symbols',   cls: 'font-symbols' },
+  { name: 'Noto Emoji',          cls: 'font-emoji' },
+  { name: 'STIX Two Math',       cls: 'font-math-vars' },
+  { name: 'Noto Sans',           cls: 'font-ancient' },
+  { name: 'DM Mono',             cls: 'font-ctrl1' },
+  { name: 'System',              cls: '' },
+];
+
+function updateFontComp() {
+  const input = document.getElementById('fontcomp-input'); if(!input) return;
+  const out   = document.getElementById('fontcomp-output');
+  if (!input || !out) return;
+  const ch = [...input.value][0] || '';
+  out.innerHTML = '';
+  if (!ch) return;
+  COMP_FONTS.forEach(f => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:6px';
+    const sym = document.createElement('div');
+    sym.className = f.cls;
+    sym.style.cssText = 'font-size:40px;line-height:1;min-height:48px;display:flex;align-items:center;justify-content:center';
+    sym.textContent = ch;
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'font-family:"DM Mono",monospace;font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px';
+    lbl.textContent = f.name;
+    card.appendChild(sym);
+    card.appendChild(lbl);
+    out.appendChild(card);
+  });
+}
+
+
+/* ── SLIDING TAB INDICATOR ──────────────────────────────────── */
+function moveIndicator(tabsId, indicatorId, activeBtn) {
+  const tabs = document.getElementById(tabsId);
+  const ind  = document.getElementById(indicatorId);
+  if (!tabs || !ind || !activeBtn) return;
+  const tr = tabs.getBoundingClientRect();
+  const br = activeBtn.getBoundingClientRect();
+  ind.style.width     = br.width + 'px';
+  ind.style.transform = 'translateX(' + (br.left - tr.left + tabs.scrollLeft) + 'px)';
+}
+
+/* ── WHEEL SCROLL ON TABS ───────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  const mainTabs = document.getElementById('main-tabs');
+  if (mainTabs) {
+    mainTabs.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
+      e.preventDefault();
+      mainTabs.scrollLeft += e.deltaY * 1.2;
+    }, { passive: false });
+    // init indicator position after layout
+    requestAnimationFrame(() => {
+      const active = mainTabs.querySelector('.tab-btn.active');
+      if (active) moveIndicator('main-tabs', 'main-tab-indicator', active);
+    });
+  }
+  window.addEventListener('resize', () => {
+    const active = document.querySelector('#main-tabs .tab-btn.active');
+    if (active) moveIndicator('main-tabs', 'main-tab-indicator', active);
+  });
+});
+
+let currentTab = "music";
+
+function activateTab(tab) {
+  currentTab = tab;
+  try { window.history.replaceState(null, '', '?tab=' + encodeURIComponent(tab)); } catch(e) {}
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+
+  // move sliding indicator
+  requestAnimationFrame(() => {
+    const activeBtn = document.querySelector('#main-tabs .tab-btn.active');
+    if (activeBtn) {
+      moveIndicator('main-tabs', 'main-tab-indicator', activeBtn);
+      activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  });
+
+  const strip = document.getElementById('subcat-strip');
+  if(!strip) return;
+  strip.style.display = '';
+
+  const subcats = SUBCATS[tab];
+  strip.innerHTML = "";
+
+  subcats.forEach((sc, i) => {
+    const btn = document.createElement("button");
+    btn.className = "subcat-btn" + (i === 0 ? " active" : "");
+    btn.textContent = sc.name;
+    btn.addEventListener("click", () => {
+      strip.querySelectorAll(".subcat-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      showSubcategory(sc.id);
+    });
+    strip.appendChild(btn);
+  });
+
+  showSubcategory(subcats[0].id);
+}
+
+function showSubcategory(id) {
+  document.querySelectorAll(".subtab-content").forEach(c => c.classList.remove("active"));
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.add("active");
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = '';
+  }
+}
+
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => activateTab(btn.dataset.tab));
+});
+
+/* ── SHARE POPUP ───────────────────────────────────────────── */
+const shareBtn   = document.getElementById("share-btn");
+const sharePopup = document.getElementById("share-popup");
+const shareCopy  = document.getElementById("share-copy-btn");
+
+shareBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  sharePopup.classList.toggle("open");
+});
+
+document.addEventListener("click", (e) => {
+  if (!sharePopup.contains(e.target) && e.target !== shareBtn)
+    sharePopup.classList.remove("open");
+});
+
+shareCopy.addEventListener("click", () => {
+  copyWithFeedback("https://simbolos.pages.dev/simbolos.html", shareCopy);
+});
+
+/* ── SEARCH POPUP ──────────────────────────────────────────── */
+let searchMode = "hex";
+
+const searchOverlay   = document.getElementById("search-popup-overlay");
+const searchInput     = document.getElementById("search-popup-input");
+const searchPrefix    = document.getElementById("search-prefix");
+const searchHint      = document.getElementById("search-hint");
+const searchGrid      = document.getElementById("search-popup-grid");
+const searchLoading   = document.getElementById("search-loading");
+const searchNoResults = document.getElementById("search-popup-no-results");
+
+const MODES = {
+  hex: {
+    prefix: "U+",
+    hint: 'Introduce un código hexadecimal Unicode, ej. <b>2665</b> → ♥',
+    placeholder: "ej. 2665"
+  },
+  dec: {
+    prefix: "#",
+    hint: 'Introduce el código decimal, ej. <b>9829</b> → ♥',
+    placeholder: "ej. 9829"
+  },
+  char: {
+    prefix: "→",
+    hint: 'Pega o escribe el carácter directamente, ej. <b>♥</b>',
+    placeholder: "ej. ♥"
+  },
+  name: {
+    prefix: "🔤",
+    hint: 'Busca por nombre Unicode, ej. <b>heart</b>, <b>arrow</b>, <b>musical</b>…',
+    placeholder: "ej. heart, arrow, star…"
+  }
+};
+
+document.getElementById("search-trigger-btn").addEventListener("click", () => {
+  searchOverlay.classList.add("open");
+  // Focus inmediato — en mobile saca el teclado
+  searchInput.focus();
+  searchInput.click();
+});
+
+searchOverlay.addEventListener("click", (e) => {
+  if (e.target === searchOverlay) closeSearchPopup();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeSearchPopup();
+});
+
+function closeSearchPopup() {
+  searchOverlay.classList.remove("open");
+  searchInput.value = "";
+  clearSearchResults();
+}
+
+document.querySelectorAll("#search-popup-overlay .search-type-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll("#search-popup-overlay .search-type-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    searchMode = tab.dataset.mode;
+    const cfg = MODES[searchMode];
+    if(searchPrefix) searchPrefix.textContent = cfg.prefix;
+    if(searchHint) searchHint.innerHTML = cfg.hint;
+    searchInput.placeholder = cfg.placeholder;
+    searchInput.value = "";
+    clearSearchResults();
+    searchInput.focus();
+  });
+});
+
+function clearSearchResults() {
+  if(searchGrid) if(searchGrid) searchGrid.innerHTML = "";
+  if(searchLoading) searchLoading.classList.remove("show");
+  if(searchNoResults) searchNoResults.classList.remove("show");
+}
+
+let searchTimer;
+if(searchInput) searchInput.addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  const val = searchInput.value.trim();
+  if (!val) { clearSearchResults(); return; }
+
+  // Show loading immediately
+  if(searchGrid) if(searchGrid) searchGrid.innerHTML = "";
+  searchNoResults.classList.remove("show");
+  searchLoading.classList.add("show");
+
+  searchTimer = setTimeout(() => {
+    runPopupSearch(val);
+  }, 400);
+});
+
+function runPopupSearch(query) {
+  searchLoading.classList.remove("show");
+  if(searchGrid) if(searchGrid) searchGrid.innerHTML = "";
+  searchNoResults.classList.remove("show");
+
+  let matches = [];
+
+  if (searchMode === "hex") {
+    const q = query.replace(/^u\+/i, "").toUpperCase();
+    matches = allSymbols.filter(({ cp }) =>
+      cp.toString(16).toUpperCase().startsWith(q)
+    );
+  } else if (searchMode === "dec") {
+    const q = query.replace(/\D/g, "");
+    if (!q) { searchNoResults.classList.add("show"); return; }
+    matches = allSymbols.filter(({ cp }) =>
+      cp.toString().startsWith(q)
+    );
+  } else if (searchMode === "char") {
+    const cp = query.codePointAt(0);
+    matches = allSymbols.filter(s => s.cp === cp);
+  } else if (searchMode === "name") {
+    const q = query.trim().toLowerCase();
+    if (!q) { searchNoResults.classList.add("show"); return; }
+    matches = allSymbols.filter(({ cp }) =>
+      getUnicodeName(cp).toLowerCase().includes(q)
+    );
+    if (matches.length === 0) { searchNoResults.classList.add("show"); return; }
+    matches.slice(0, 120).forEach(({ sym, cp, fontClass }) => {
+      searchGrid.appendChild(createBox(sym, cp, fontClass));
+    });
+    return;
+  }
+
+  if (matches.length === 0) {
+    searchNoResults.classList.add("show");
+    return;
+  }
+
+  matches.slice(0, 120).forEach(({ sym, cp, fontClass }) => {
+    searchGrid.appendChild(createBox(sym, cp, fontClass));
+  });
+}
+
+/* ── OLD SEARCH FUNCTIONS REMOVED ─────────────────────────── */
+
+/* ── POPULATE ALL SYMBOLS ──────────────────────────────────── */
+const musicSymbols = [
+  "♪","♫","♩","♬","♭","♯","♮",
+  "𝅝","𝅗𝅥","𝅘𝅥","𝅘𝅥𝅮","𝅘𝅥𝅯","𝅘𝅥𝅰","𝅘𝅥𝅱","𝅘𝅥𝅲","𝅥",
+  "𝄽","𝄾","𝄿","𝅀","𝅁","𝅂",
+  "𝄞","𝄢","𝄡",
+  "𝄐","𝄑","𝄒","𝄓","𝄔","𝄕","𝄖","𝄗","𝄘","𝄙","𝄚",
+  "𝄴","𝄵","𝄶","𝄷","𝄀","𝄁","𝄂","𝄃","𝄄",
+  "𝆏","𝆑","𝆒","𝆓","𝆔","𝆕","𝆖","𝆗","𝆘","𝆙","𝆚"
+];
+musicSymbols.forEach(sym => addSymbolToGrid(sym, sym.codePointAt(0), "music-grid", "font-music"));
+
+/* ── CONJUNTOS NUMÉRICOS ─────────────────────────────────────── */
+const mathSets = [
+  // Conjuntos clásicos (letterlike symbols block)
+  0x2115, // ℕ Naturales
+  0x2124, // ℤ Enteros
+  0x211A, // ℚ Racionales
+  0x211D, // ℝ Reales
+  0x2102, // ℂ Complejos
+  0x210D, // ℍ Cuaterniones
+  0x2119, // ℙ Primos / Proyectivo
+  0x1D53C, // 𝔼 Esperanza (prob.)
+  // Double-struck letras mayúsculas completas (U+1D538–U+1D551, con huecos cubiertos por letterlike)
+  0x1D538, // 𝔸 A
+  0x1D539, // 𝔹 B
+  0x2102,  // ℂ C (ya arriba, se filtra por Set)
+  0x1D53B, // 𝔻 D
+  0x1D53C, // 𝔼 E
+  0x1D53D, // 𝔽 F
+  0x1D53E, // 𝔾 G
+  0x210D,  // ℍ H
+  0x1D540, // 𝕀 I
+  0x1D541, // 𝕁 J
+  0x1D542, // 𝕂 K
+  0x1D543, // 𝕃 L
+  0x1D544, // 𝕄 M
+  0x2115,  // ℕ N
+  0x1D546, // 𝕆 O
+  0x2119,  // ℙ P
+  0x211A,  // ℚ Q
+  0x211D,  // ℝ R
+  0x1D54A, // 𝕊 S
+  0x1D54B, // 𝕋 T
+  0x1D54C, // 𝕌 U
+  0x1D54D, // 𝕍 V
+  0x1D54E, // 𝕎 W
+  0x1D54F, // 𝕏 X
+  0x1D550, // 𝕐 Y
+  0x2124,  // ℤ Z
+  // Double-struck minúsculas más usadas
+  0x1D552, // 𝕒 a
+  0x1D553, // 𝕓 b
+  0x1D554, // 𝕔 c
+  0x1D555, // 𝕕 d
+  0x1D556, // 𝕖 e
+  0x1D557, // 𝕗 f
+  0x1D558, // 𝕘 g
+  0x1D559, // 𝕙 h
+  0x1D55A, // 𝕚 i
+  0x1D55B, // 𝕛 j
+  0x1D55C, // 𝕜 k
+  0x1D55D, // 𝕝 l
+  0x1D55E, // 𝕞 m
+  0x1D55F, // 𝕟 n
+  0x1D560, // 𝕠 o
+  0x1D561, // 𝕡 p
+  0x1D562, // 𝕢 q
+  0x1D563, // 𝕣 r
+  0x1D564, // 𝕤 s
+  0x1D565, // 𝕥 t
+  0x1D566, // 𝕦 u
+  0x1D567, // 𝕧 v
+  0x1D568, // 𝕨 w
+  0x1D569, // 𝕩 x
+  0x1D56A, // 𝕪 y
+  0x1D56B, // 𝕫 z
+  // Double-struck dígitos
+  0x1D7D8, // 𝟘 0
+  0x1D7D9, // 𝟙 1
+  0x1D7DA, // 𝟚 2
+  0x1D7DB, // 𝟛 3
+  0x1D7DC, // 𝟜 4
+  0x1D7DD, // 𝟝 5
+  0x1D7DE, // 𝟞 6
+  0x1D7DF, // 𝟟 7
+  0x1D7E0, // 𝟠 8
+  0x1D7E1, // 𝟡 9
+];
+// Deduplicate
+const seenSets = new Set();
+mathSets.forEach(cp => {
+  if (seenSets.has(cp)) return;
+  seenSets.add(cp);
+  try {
+    const sym = String.fromCodePoint(cp);
+    addSymbolToGrid(sym, cp, "math-sets-grid", "font-math-vars");
+  } catch {}
+});
+
+generateSymbols(0x2200, 0x22FF, "math-ops-grid", "font-math");
+
+/* Variables e incógnitas — letras itálicas matemáticas */
+const mathVars = [
+  // Incógnitas clásicas: x y z w
+  0x1D465, 0x1D466, 0x1D467, 0x1D464,
+  // Variables comunes: a b c d e f g h i j k l m n
+  0x1D44E, 0x1D44F, 0x1D450, 0x1D451, 0x1D452, 0x1D453, 0x1D454,
+  0x210E, /* ℎ — U+1D455 está vacío en Unicode, se usa U+210E (Planck constant) */
+  0x1D456, 0x1D457, 0x1D458, 0x1D459, 0x1D45A, 0x1D45B,
+  // o p q r s t u v
+  0x1D45C, 0x1D45D, 0x1D45E, 0x1D45F, 0x1D460, 0x1D461, 0x1D462, 0x1D463,
+  // Griegas más usadas: α β γ δ ε θ λ μ π σ φ ω
+  0x1D6FC, 0x1D6FD, 0x1D6FE, 0x1D6FF,
+  0x1D700, 0x1D703, 0x1D706, 0x1D707,
+  0x1D70B, 0x1D70E, 0x1D719, 0x1D714,
+];
+mathVars.forEach(cp => {
+  try {
+    const sym = String.fromCodePoint(cp);
+    addSymbolToGrid(sym, cp, "math-vars-grid", "font-math-vars");
+  } catch {}
+});
+
+generateSymbols(0x27C0, 0x27EF, "math-a-grid", "font-math");
+generateSymbols(0x2980, 0x29FF, "math-b-grid", "font-math");
+generateSymbols(0x2A00, 0x2AFF, "math-sup-grid", "font-math");
+
+generateSymbols(0x2190, 0x21FF, "arr-basic-grid", "font-symbols");
+generateSymbols(0x27F0, 0x27FF, "arr-a-grid", "font-symbols");
+generateSymbols(0x2900, 0x297F, "arr-b-grid", "font-symbols");
+generateSymbols(0x2B00, 0x2BFF, "arr-misc-grid", "font-symbols");
+
+generateSymbols(0x25A0, 0x25FF, "geo-shapes-grid", "font-symbols");
+generateSymbols(0x2580, 0x259F, "geo-blocks-grid", "font-symbols");
+generateSymbols(0x2500, 0x257F, "geo-box-grid", "font-symbols");
+
+generateSymbols(0x2300, 0x23FF, "misc-tech-grid", "font-symbols");
+generateSymbols(0x2600, 0x26FF, "misc-sym-grid", "font-symbols");
+generateSymbols(0x2648, 0x2653, "misc-zodiac-grid", "font-symbols");
+generateSymbols(0x2609, 0x263F, "misc-astro-grid", "font-symbols");
+
+generateSymbols(0x2700, 0x27BF, "ding-classic-grid", "font-symbols");
+generateSymbols(0x1F650, 0x1F67F, "ding-orn-grid", "font-symbols");
+
+generateSymbols(0x1F600, 0x1F64F, "emo-face-grid", "font-emoji");
+generateSymbols(0x1F300, 0x1F5FF, "emo-pict-grid", "font-emoji");
+generateSymbols(0x1F900, 0x1F9FF, "emo-sup-grid", "font-emoji");
+
+generateSymbols(0x1F680, 0x1F6C5, "trans-main-grid", "font-emoji");
+generateSymbols(0x1F6C6, 0x1F6FF, "trans-sign-grid", "font-emoji");
+
+/* ── LATIN EXTENDED ─────────────────────────────────────────── */
+generateSymbols(0x0100, 0x024F, "lat-ext-grid", "font-fallback");
+// Control C0 (show as placeholder box since non-printable)
+for (let cp = 0x0000; cp <= 0x001F; cp++) {
+  const sym = "␀␁␂␃␄␅␆␇␈␉␊␋␌␍␎␏␐␑␒␓␔␕␖␗␘␙␚␛␜␝␞␟"[cp] || "▯";
+  addSymbolToGrid(sym, cp, "lat-ctrl-grid", "font-symbols", true);
+}
+// Control C1
+for (let cp = 0x0080; cp <= 0x009F; cp++) {
+  const sym = cp.toString(16).toUpperCase();
+  addSymbolToGrid(sym, cp, "lat-ctrl2-grid", "font-ctrl1", true);
+}
+
+/* ── CURRENCY ────────────────────────────────────────────────── */
+// U+20A0–U+20BF have real glyphs; U+20C0+ are too new for any web font
+for (let cp = 0x20A0; cp <= 0x20CF; cp++) {
+  if (cp <= 0x20BF) {
+    const sym = String.fromCodePoint(cp);
+    addSymbolToGrid(sym, cp, "cur-main-grid", "font-currency");
+  } else {
+    const sym = cp.toString(16).toUpperCase();
+    addSymbolToGrid(sym, cp, "cur-main-grid", "font-ctrl1");
+  }
+}
+
+/* ── ENCLOSED ALPHANUMERICS ─────────────────────────────────── */
+generateSymbols(0x2460, 0x24FF, "enc-alphanum-grid", "font-symbols");
+generateSymbols(0x2160, 0x218B, "enc-roman-grid", "font-symbols");
+generateSymbols(0x24B6, 0x24FF, "enc-letter-grid", "font-symbols");
+
+/* ── EXTRA MATH ─────────────────────────────────────────────── */
+generateSymbols(0x2070, 0x209F, "math-super-grid", "font-math");
+generateSymbols(0x2150, 0x215F, "math-frac-grid", "font-math");
+
+/* ── BRAILLE ────────────────────────────────────────────────── */
+generateSymbols(0x2800, 0x28FF, "geo-braille-grid", "font-symbols");
+
+/* ── CHESS & CARDS ──────────────────────────────────────────── */
+generateSymbols(0x2654, 0x2685, "misc-chess-grid", "font-symbols");
+generateSymbols(0x1F0A0, 0x1F0FF, "misc-cards-grid", "font-emoji");
+
+/* ── ANCIENT SCRIPTS ───────────────────────────────────────── */
+
+// OLD ENGLISH / ANGLO-SAXON — caracteres dispersos en bloques Latin
+const oldEngChars = [
+  // Las letras definitorias del Old English
+  0x00DE, 0x00FE, // Þþ thorn
+  0x00D0, 0x00F0, // Ðð eth
+  0x00C6, 0x00E6, // Ææ ash
+  0x0152, 0x0153, // Œœ ethel
+  0x01F7, 0x01BF, // Ƿƿ wynn
+  0x021C, 0x021D, // Ȝȝ yogh
+  // Variantes y letras relacionadas
+  0x0110, 0x0111, // Đđ d con trazo
+  0x014A, 0x014B, // Ŋŋ eng
+  0x01A2, 0x01A3, // Ƣƣ oi (Old English)
+  0x0180,         // ƀ b con trazo
+  0x0238, 0x0239, // ȸȹ db/qp ligatures medievales
+  0x023A, 0x023E, // Ⱥ Ʉ barred
+  // IPA heredados del anglosajón
+  0x0250, 0x0251, 0x0252, // ɐɑɒ
+  0x1E9C, 0x1E9D, 0x1E9E, // ẜẝẞ
+  // Wynn, thorn y eth mayúsculas/minúsculas adicionales
+  0xA76E, 0xA76F, // Ꝯꝯ con
+  0xA770,         // ꝰ modifier
+  0xA790, 0xA791, // Ꞑꞑ n con descendente
+  0xA7C0, 0xA7C1, // Ꟁꟁ variantes Old English
+];
+const seenOE = new Set();
+oldEngChars.forEach(cp => {
+  if (seenOE.has(cp)) return;
+  seenOE.add(cp);
+  try { addSymbolToGrid(String.fromCodePoint(cp), cp, "anc-oldeng-grid", "font-ancient"); } catch {}
+});
+
+// NÓRDICO — letras escandinavas modernas + arcaicas
+const norseChars = [
+  0x00C5, 0x00E5, // Åå
+  0x00D8, 0x00F8, // Øø
+  0x00C6, 0x00E6, // Ææ (compartida con OE)
+  0x01E2, 0x01E3, // Ǣǣ ae con macron
+  0x00DF, 0x1E9E, // ßẞ sharp s
+  0x014A, 0x014B, // Ŋŋ
+  0x00DE, 0x00FE, // Þþ (también nórdico)
+  0x00D0, 0x00F0, // Ðð (islandés moderno)
+  0x01F6, 0x0195, // Ƕƕ hwair (gótico-nórdico)
+  0x01F7, 0x01BF, // Ƿƿ wynn nórdico
+  0x16F0, 0x16F1, // ᛰᛱ runas nórdicas tardías
+  0x00C4, 0x00E4, // Ää
+  0x00D6, 0x00F6, // Öö
+];
+const seenNO = new Set();
+norseChars.forEach(cp => {
+  if (seenNO.has(cp)) return;
+  seenNO.add(cp);
+  try { addSymbolToGrid(String.fromCodePoint(cp), cp, "anc-norse-grid", "font-ancient"); } catch {}
+});
+
+// RÚNICO Elder Futhark + variantes (U+16A0–U+16FF)
+generateSymbols(0x16A0, 0x16FF, "anc-runic-grid",    "font-ancient");
+
+// GÓTICO DE ULFILAS (U+10330–U+1034F)
+generateSymbols(0x10330, 0x1034F, "anc-gothic-grid",  "font-ancient");
+
+// LATIN MEDIEVAL (Latin Extended-D U+A720–U+A7FF + Extended-C U+2C60–U+2C7F)
+generateSymbols(0xA720, 0xA7FF, "anc-medieval-grid",  "font-ancient");
+generateSymbols(0x2C60, 0x2C7F, "anc-medieval-grid",  "font-ancient");
+
+// OGHAM (U+1680–U+169F)
+generateSymbols(0x1680, 0x169F, "anc-ogham-grid",     "font-ancient");
+
+// GLAGOLÍTICO (U+2C00–U+2C5F)
+generateSymbols(0x2C00, 0x2C5F, "anc-glagol-grid",    "font-ancient");
+
+// COPTO (U+2C80–U+2CFF)
+generateSymbols(0x2C80, 0x2CFF, "anc-coptic-grid",    "font-ancient");
+
+// ARMENIO (U+0530–U+058F)
+generateSymbols(0x0530, 0x058F, "anc-armenian-grid",  "font-ancient");
+
+// GEORGIANO Asomtavruli + Mkhedruli (U+10A0–U+10FF)
+generateSymbols(0x10A0, 0x10FF, "anc-georgian-grid",  "font-ancient");
+
+// GRIEGO EXTENDIDO politónico (U+1F00–U+1FFF)
+generateSymbols(0x1F00, 0x1FFF, "anc-greek-ext-grid", "font-ancient");
+
+/* ── CJK LAZY LOADING ──────────────────────────────────────── */
+const CJK_BATCH = 200;
+
+function makeLazyLoader(gridId, start, end, sentinelId) {
+  let next = start;
+  const grid = document.getElementById(gridId);
+  const sentinel = document.getElementById(sentinelId);
+  if (!grid || !sentinel) return;
+
+  function loadBatch() {
+    const limit = Math.min(next + CJK_BATCH, end + 1);
+    for (let cp = next; cp < limit; cp++) {
+      try {
+        const sym = String.fromCodePoint(cp);
+        addSymbolToGrid(sym, cp, gridId, "font-cjk");
+      } catch {}
+    }
+    next = limit;
+    if (next > end) observer.disconnect();
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) loadBatch();
+  }, { rootMargin: "400px" });
+
+  observer.observe(sentinel);
+  loadBatch(); // carga inicial
+}
+
+// Radicales Kangxi — pocos, cargar todos de golpe
+generateSymbols(0x2F00, 0x2FDF, "cjk-radicals-grid", "font-cjk");
+
+// ── ESPECIALES: Runas, Alquimia, Dominó, Mahjong, Dados ────
+// Runas éldar (Tolkien subset del Cirth) + Anglo-Saxon Futhorc
+generateSymbols(0x16A0, 0x16FF, "esp-runas-grid",    "font-ancient");
+// Alquimia Unicode block + símbolos astrológicos
+generateSymbols(0x1F700, 0x1F77F, "esp-alquimia-grid", "font-emoji");
+generateSymbols(0x2600, 0x2604, "esp-alquimia-grid", "font-symbols");
+generateSymbols(0x2609, 0x2609, "esp-alquimia-grid", "font-symbols");
+generateSymbols(0x260A, 0x2614, "esp-alquimia-grid", "font-symbols");
+// Dominó
+generateSymbols(0x1F030, 0x1F093, "esp-domino-grid", "font-emoji");
+// Mahjong
+generateSymbols(0x1F000, 0x1F02B, "esp-mahjong-grid", "font-emoji");
+// Dados y juegos de mesa
+generateSymbols(0x2680, 0x2685, "esp-juegos-grid", "font-symbols");
+generateSymbols(0x1F3B0, 0x1F3B3, "esp-juegos-grid", "font-emoji");
+generateSymbols(0x265A, 0x265F, "esp-juegos-grid", "font-symbols");
+generateSymbols(0x1F0A0, 0x1F0FF, "esp-juegos-grid", "font-emoji");
+// Miscelánea II: sellos, etiquetas, tags, variaciones
+generateSymbols(0x1F3F0, 0x1F3FF, "esp-misc2-grid", "font-emoji");
+generateSymbols(0x1F4AF, 0x1F4AF, "esp-misc2-grid", "font-emoji");
+generateSymbols(0x1F520, 0x1F52F, "esp-misc2-grid", "font-emoji");
+generateSymbols(0x1F550, 0x1F567, "esp-misc2-grid", "font-emoji");
+generateSymbols(0x1F5FB, 0x1F5FF, "esp-misc2-grid", "font-emoji");
+
+// CJK básico, Extensión A y Compatibilidad — carga lazy
+makeLazyLoader("cjk-basic-grid",   0x4E00, 0x9FFF, "cjk-sentinel");
+makeLazyLoader("cjk-ext-a-grid",   0x3400, 0x4DBF, "cjk-ext-a-sentinel");
+makeLazyLoader("cjk-compat-grid",  0xF900, 0xFAFF, "cjk-compat-sentinel");
+
+/* ── GREEK ───────────────────────────────────────────────────── */
+// Alfabeto griego básico (U+0370–U+03FF)
+generateSymbols(0x0391, 0x03C9, "greek-basic-grid", "font-greek");
+// Símbolos matemáticos griegos adicionales
+const greekExtraSyms = [
+  0x03D0,0x03D1,0x03D2,0x03D3,0x03D4,0x03D5,0x03D6,0x03D7,
+  0x03D8,0x03D9,0x03DA,0x03DB,0x03DC,0x03DD,0x03DE,0x03DF,
+  0x03E0,0x03E1,0x03F0,0x03F1,0x03F2,0x03F3,0x03F4,0x03F5,0x03F6,
+  // Koppa, stigma, digamma, sampi arcaicos
+  0x03DA,0x03DC,0x03DE,0x03E0,
+  // Letras griegas usadas en matemáticas
+  0x1D6A8,0x1D6B1,0x1D6C0,
+];
+greekExtraSyms.forEach(cp => {
+  try { addSymbolToGrid(String.fromCodePoint(cp), cp, "greek-symbols-grid", "font-greek"); } catch {}
+});
+// También mostrar copias matemáticas en negrita/cursiva
+[
+  0x1D6C2,0x1D6C3,0x1D6C4,0x1D6C5,0x1D6C6,0x1D6C7,0x1D6C8,0x1D6C9,0x1D6CA,
+  0x1D6CB,0x1D6CC,0x1D6CD,0x1D6CE,0x1D6CF,0x1D6D0,0x1D6D1,0x1D6D2,0x1D6D3,
+  0x1D6D4,0x1D6D5,0x1D6D6,0x1D6D7,0x1D6D8,0x1D6D9,0x1D6DA,0x1D6DB,0x1D6DC,
+].forEach(cp => {
+  try { addSymbolToGrid(String.fromCodePoint(cp), cp, "greek-symbols-grid", "font-math-vars"); } catch {}
+});
+// Griego arcaico
+generateSymbols(0x0370, 0x0390, "greek-archaic-grid", "font-greek");
+generateSymbols(0x03CA, 0x03FF, "greek-archaic-grid", "font-greek");
+
+/* ── IPA (International Phonetic Alphabet) ───────────────────── */
+// Vocales IPA
+const ipaVowels = [
+  0x0069,0x0079,0x026A,0x0289,0x028F,0x0065,0x00F8,0x0258,0x0275,
+  0x0259,0x0065,0x00F8,0x0264,0x006F,0x0025B,0x0153,0x025C,0x025E,
+  0x028C,0x0254,0x0061,0x0276,0x00E6,0x0061,0x0250,0x025A,0x025B,
+  0x025C,0x025D,0x025E,0x025F,0x026B,0x026C,0x026D,0x026E,0x026F,
+  0x0070,0x0071,0x0072,0x0073,0x0074,0x0075,0x0076,0x0077,0x0078,
+];
+const ipaVowelsCore = [
+  0x0069, // i  close front unrounded
+  0x0079, // y  close front rounded
+  0x026A, // ɪ  near-close near-front unrounded
+  0x028F, // ʏ  near-close near-front rounded
+  0x0065, // e  close-mid front unrounded
+  0x00F8, // ø  close-mid front rounded
+  0x025B, // ɛ  open-mid front unrounded
+  0x0153, // œ  open-mid front rounded
+  0x00E6, // æ  near-open front unrounded
+  0x0061, // a  open front unrounded
+  0x0070, // p  (placeholder)
+  0x0071, // q
+  0x0289, // ʉ  close central rounded
+  0x0258, // ɘ  close-mid central unrounded
+  0x025C, // ɜ  open-mid central unrounded
+  0x0250, // ɐ  near-open central
+  0x026F, // ɯ  close back unrounded
+  0x0075, // u  close back rounded
+  0x028A, // ʊ  near-close near-back rounded
+  0x0264, // ɤ  close-mid back unrounded
+  0x006F, // o  close-mid back rounded
+  0x028C, // ʌ  open-mid back unrounded
+  0x0254, // ɔ  open-mid back rounded
+  0x0251, // ɑ  open back unrounded
+  0x0252, // ɒ  open back rounded
+  0x025A, // ɚ  mid central rhotacized
+  0x025D, // ɝ  open-mid central rhotacized
+  0x0259, // ə  schwa
+  0x0260, // ɠ
+  0x0275, // ɵ  close-mid central rounded
+  0x026B, // ɫ  velarized l
+  0x026C, // ɬ  lateral fricative
+  0x026D, // ɭ  retroflex lateral
+  0x026E, // ɮ  lateral fricative voiced
+];
+const seenIpaV = new Set();
+ipaVowelsCore.forEach(cp => {
+  if (seenIpaV.has(cp)) return; seenIpaV.add(cp);
+  try { addSymbolToGrid(String.fromCodePoint(cp), cp, "ipa-vowels-grid", "font-ipa"); } catch {}
+});
+
+// Consonantes IPA
+const ipaConsonants = [
+  0x0070,0x0062,0x0074,0x0064,0x0288,0x0256,0x0063,0x025F,
+  0x006B,0x0261,0x0071,0x0262,0x0294,0x006D,0x0271,0x006E,
+  0x0273,0x0272,0x014B,0x0274,0x0299,0x0072,0x0280,0x027E,
+  0x027D,0x0278,0x03B2,0x0066,0x0076,0x03B8,0x00F0,0x0073,
+  0x007A,0x0283,0x0292,0x0282,0x0290,0x00E7,0x029D,0x0078,
+  0x0263,0x03C7,0x0281,0x0127,0x0295,0x0266,0x026A,0x0265,
+  0x028B,0x0077,0x006C,0x026D,0x028E,0x026C,0x026E,0x026B,
+  0x028C,0x0254,0x0253,0x0257,0x0284,0x0260,0x029B,0x02A1,
+  0x02A2,0x0267,0x0298,0x01C0,0x01C1,0x01C2,0x01C3,
+];
+const seenIpaC = new Set();
+ipaConsonants.forEach(cp => {
+  if (seenIpaC.has(cp)) return; seenIpaC.add(cp);
+  try { addSymbolToGrid(String.fromCodePoint(cp), cp, "ipa-consonants-grid", "font-ipa"); } catch {}
+});
+
+// Diacríticos IPA (U+02B0–U+02FF, U+0300–U+036F selección)
+const ipaDiacs = [
+  0x02BC,0x02C8,0x02CC,0x02D0,0x02D1,0x0306,0x0325,0x032A,
+  0x032C,0x0330,0x0339,0x031C,0x031F,0x0320,0x0308,0x033D,
+  0x031A,0x0303,0x0348,0x031D,0x031E,0x0318,0x0319,0x0300,
+  0x0301,0x0302,0x0304,0x030B,0x030F,0x02E5,0x02E6,0x02E7,
+  0x02E8,0x02E9,0x030C,0x0302,0x0327,0x0328,
+];
+const seenIpaD = new Set();
+ipaDiacs.forEach(cp => {
+  if (seenIpaD.has(cp)) return; seenIpaD.add(cp);
+  try { addSymbolToGrid(String.fromCodePoint(cp), cp, "ipa-diacritics-grid", "font-ipa"); } catch {}
+});
+
+// Tonos y marcas prosódicas
+const ipaTones = [
+  0x02E5,0x02E6,0x02E7,0x02E8,0x02E9, // tone letters
+  0x030B,0x0301,0x0304,0x0300,0x030F, // combining tone
+  0x2196,0x2197,0x2198,0x2199,         // arrows de tono
+  0x007C,0x2016,0x002E,0x2014,0x203F, // delimitadores
+  0x0361,0x035C,0x0320,                // ligatures
+  0x02DE,0x02B0,0x02B1,0x02B2,0x02B3,0x02B7,
+];
+const seenIpaT = new Set();
+ipaTones.forEach(cp => {
+  if (seenIpaT.has(cp)) return; seenIpaT.add(cp);
+  try { addSymbolToGrid(String.fromCodePoint(cp), cp, "ipa-tones-grid", "font-ipa"); } catch {}
+});
+
+/* ── HELPER: copy text content of element ── */
+function copyEl(id){const el=document.getElementById(id);if(el)copyWithFeedback(el.textContent.trim(),el);}
+
+/* ── STRING INSPECTOR ── */
+function updateInspector(){
+  const v=document.getElementById('inspect-input').value;
+  const out=document.getElementById('inspect-output');
+  out.innerHTML='';
+  if(!v)return;
+  [...v].forEach(c=>{
+    const cp=c.codePointAt(0);
+    const hex='U+'+cp.toString(16).toUpperCase().padStart(4,'0');
+    const el=document.createElement('div');
+    el.className='inspect-char';
+    el.title=getUnicodeName(cp);
+    el.innerHTML=`<span class="ic-sym">${c}</span><span class="ic-code">${hex}</span>`;
+    el.onclick=()=>openModal(c,cp,'');
+    out.appendChild(el);
+  });
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const ii=document.getElementById('inspect-input');
+  if(ii)ii.addEventListener('input',updateInspector);
+});
+
+/* ── ENCODER / DECODER ── */
+function encDec(mode){
+  const v=document.getElementById('encode-input').value;
+  const out=document.getElementById('encode-output');
+  let r='';
+  try{
+    if(mode==='b64e') r=btoa(unescape(encodeURIComponent(v)));
+    else if(mode==='b64d') r=decodeURIComponent(escape(atob(v)));
+    else if(mode==='urle') r=encodeURIComponent(v);
+    else if(mode==='urld') r=decodeURIComponent(v);
+    else if(mode==='html') r=[...v].map(c=>{const cp=c.codePointAt(0);return cp>127?'&#x'+cp.toString(16).toUpperCase()+';':c;}).join('');
+    else if(mode==='uni') r=[...v].map(c=>{const cp=c.codePointAt(0);return cp>127?'\\u{'+cp.toString(16).toUpperCase()+'}':c;}).join('');
+  }catch(e){r='Error: '+e.message;}
+  out.textContent=r||'(vacío)';
+}
+
+/* ── PASSWORD GENERATOR ── */
+const PWD_SYMS=[0x2665,0x2660,0x2663,0x2666,0x2605,0x25CF,0x25A0,0x2764,0x26A1,0x2714,0x2716,0x00A7,0x00B6,0x00A9,0x00AE,0x2122,0x221E,0x2248,0x2260,0x00B1];
+function genPwd(){
+  const len=parseInt(document.getElementById('pwd-len').value)||20;
+  const upper=document.getElementById('pwd-upper').checked;
+  const num=document.getElementById('pwd-num').checked;
+  const sym=document.getElementById('pwd-sym').checked;
+  let chars='abcdefghijklmnopqrstuvwxyz';
+  if(upper) chars+='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  if(num) chars+='0123456789';
+  let symChars=sym?PWD_SYMS.map(cp=>String.fromCodePoint(cp)).join(''):'';
+  const all=chars+symChars;
+  const arr=new Uint32Array(len);
+  crypto.getRandomValues(arr);
+  const pwd=[...arr].map(n=>all[n%all.length]).join('');
+  const po=document.getElementById('pwd-output'); if(po) po.textContent=pwd;
+}
+
+/* ── ASCII ART ── */
+const ASCII_FONT={
+  A:['▄▀▄','█▀█','▀ ▀'],B:['█▄ ','█▀▄','█▄▀'],C:['▄▀▀','█  ','▀▄▄'],D:['█▄ ','█ █','█▄▀'],
+  E:['▄▀▀','█▀ ','▀▄▄'],F:['▄▀▀','█▀ ','▀  '],G:['▄▀▀','█ ▄','▀▄▄'],H:['█ █','███','█ █'],
+  I:['▀█▀',' █ ','▄█▄'],J:[' ▄▀',' █ ','▄█ '],K:['█ █','██ ','█ █'],L:['█  ','█  ','▀▄▄'],
+  M:['█▄█','█ █','█ █'],N:['█▄█','█ █','█ █'],O:['▄▀▄','█ █','▀▄▀'],P:['█▄▀','██ ','▀  '],
+  Q:['▄▀▄','█ █','▀▄▀▄'],R:['█▄▀','██▄','█ █'],S:['▄▀▀','▀▀▄','▄▄▀'],T:['▀█▀',' █ ',' █ '],
+  U:['█ █','█ █','▀▄▀'],V:['█ █','█ █','▀▄▀'],W:['█ █','█ █','▀█▀'],X:['█ █','▀█▀','█ █'],
+  Y:['█ █','▀█▀',' █ '],Z:['▀▀█',' █ ','█▄▄'],' ':['   ','   ','   '],'0':['▄▀▄','█ █','▀▄▀'],
+  '1':[' █ ','▄█ ',' █▄'],'2':['▀▀▄',' ▄▀','▄▄▄'],'3':['▀▀▄',' ▄▄','▄▄▀'],'!':['▐█▌','▐█▌','▐ ▌']
+};
+const ASCII_ALTS={slim:{fill:'▓',empty:'░'},dots:{fill:'•',empty:' '},border:{fill:'□',empty:' '}};
+function genAscii(){
+  const txt=document.getElementById('ascii-input').value.toUpperCase()||'HOLA';
+  const style=document.getElementById('ascii-style').value;
+  const rows=[0,1,2].map(r=>txt.split('').map(ch=>{
+    const g=ASCII_FONT[ch]||['?  ','?  ','?  '];
+    if(style==='block') return g[r]+'  ';
+    const alt=ASCII_ALTS[style];
+    return g[r].replace(/[▄▀█▐▌▓]/g,alt.fill).replace(/ /g,alt.empty)+'  ';
+  }).join(''));
+  document.getElementById('ascii-output').textContent=rows.join('\n');
+}
+
+/* ── QUIZ ── */
+let quizScore=0, quizTotal=0, quizLocked=false;
+const QUIZ_POOL=[0x2665,0x2660,0x2663,0x2666,0x2605,0x2764,0x263A,0x2602,0x2603,0x26A1,0x2714,0x2718,0x2728,0x1F300,0x2126,0x03A9,0x221E,0x2248,0x00B5,0x00B6,0x00A9,0x00AE,0x2122,0x2190,0x2192,0x2191,0x2193,0x2194,0x21D2,0x2200,0x2203,0x2207,0x2211,0x220F,0x221A,0x222B,0x2260,0x2264,0x2265,0x00B1,0x00D7,0x00F7];
+function shuffleArr(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function nextQuiz(){
+  if(!document.getElementById('quiz-sym'))return;
+  quizLocked=false;
+  const pool=shuffleArr(QUIZ_POOL);
+  const correct=pool[0];
+  const opts=shuffleArr(pool.slice(0,4));
+  document.getElementById('quiz-sym').textContent=String.fromCodePoint(correct);
+  const optsEl=document.getElementById('quiz-opts');
+  if(!optsEl) return;
+  optsEl.innerHTML='';
+  opts.forEach(cp=>{
+    const btn=document.createElement('button');
+    btn.className='quiz-opt';
+    btn.textContent=getUnicodeName(cp);
+    btn.onclick=()=>{
+      if(quizLocked)return;
+      quizLocked=true;
+      quizTotal++;
+      if(cp===correct){quizScore++;btn.classList.add('correct');}
+      else{btn.classList.add('wrong');optsEl.querySelectorAll('.quiz-opt').forEach(b=>{if(b.textContent===getUnicodeName(correct))b.classList.add('correct');});}
+      document.getElementById('quiz-score').textContent=`Puntos: ${quizScore}/${quizTotal}`;
+    };
+    optsEl.appendChild(btn);
+  });
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  if(document.getElementById('quiz-sym')) setTimeout(nextQuiz,600);
+
+  // ASCII TABLE
+  const tbl=document.getElementById('ascii-table');
+  if(tbl){for(let i=32;i<=126;i++){
+    const div=document.createElement('div');
+    div.className='inspect-char';
+    div.style.cssText='cursor:pointer';
+    div.title=getUnicodeName(i);
+    div.innerHTML=`<span class="ic-sym" style="font-size:20px">${String.fromCharCode(i)}</span><span class="ic-code">${i}</span>`;
+    div.onclick=()=>openModal(String.fromCharCode(i),i,'');
+    tbl.appendChild(div);
+  }}
+});
+
+/* ── INIT ──────────────────────────────────────────────────── */
+activateTab("music");
+
+/* ── AUTO-OPEN SEARCH (PWA shortcut ?search=1) ─────────────── */
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('search') === '1') {
+    function openSearch() {
+      const nameModeTab = document.querySelector('#search-popup-overlay .search-type-tab[data-mode="name"]');
+      if (nameModeTab) nameModeTab.click();
+      const overlay = document.getElementById('search-popup-overlay');
+      if (overlay) overlay.classList.add('open');
+      const inp = document.getElementById('search-popup-input');
+      if (inp) { inp.focus(); inp.click(); }
+    }
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      openSearch();
+    } else {
+      document.addEventListener('DOMContentLoaded', openSearch);
+    }
+  }
+
+  /* ── PWA shortcut ?tab=NOMBRE (+ English aliases) ─────────── */
+  const TAB_ALIASES_SIM = {
+    'music':'music','musica':'music','música':'music',
+    'math':'math','matematicos':'math','matematicas':'math','mathematics':'math',
+    'arrows':'arrows','flechas':'arrows',
+    'geo':'geo','geometric':'geo','geometricos':'geo',
+    'misc':'misc','miscelanea':'misc','miscelánea':'misc','miscellaneous':'misc',
+    'dingbats':'dingbats',
+    'emoji':'emoji',
+    'transport':'transport','transporte':'transport',
+    'latin':'latin',
+    'currency':'currency','monedas':'currency','money':'currency',
+    'enclosed':'enclosed','encerrados':'enclosed',
+    'cjk':'cjk','chinese':'cjk','japanese':'cjk','korean':'cjk',
+    'ancient':'ancient','antiguos':'ancient','historical':'ancient',
+  };
+  const rawTab = (params.get('tab') || '').toLowerCase().trim();
+  if (rawTab) {
+    const resolved = TAB_ALIASES_SIM[rawTab] || rawTab;
+    if (document.querySelector("[data-tab=\"" + resolved + "\"]")) activateTab(resolved);
+  }
+
+  /* ── PWA shortcut ?random=1 ────────────────────────────────── */
+  if (params.get('random') === '1') {
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const btn = document.getElementById('mob-random-btn')
+                 || document.getElementById('random-btn');
+        if (btn) btn.click();
+      }, 400);
+    });
+  }
+})();
+</script>
+
+<!-- MOBILE BOTTOM BAR -->
+<div class="mobile-bar" id="mobile-bar">
+  <a href="index.html" class="mobile-bar-btn" title="Menú">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Menú
+  </a>
+  <a href="tools.html" class="mobile-bar-btn" title="Tools">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+    Tools
+  </a>
+  <button class="mobile-bar-btn" id="mob-search-btn" title="Buscar">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    Buscar
+  </button>
+  <button class="mobile-bar-btn" id="mob-random-btn" title="Aleatorio">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+    Aleatorio
+  </button>
+  <button class="mobile-bar-btn" id="mob-share-btn" title="Compartir">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    Compartir
+  </button>
+</div>
+
+
+<div id="pwa-banner" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+  background:var(--surface2); border:1px solid var(--border); border-radius:14px;
+  padding:12px 18px; align-items:center; gap:12px; z-index:99999;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4); font-family:'Syne',sans-serif; font-size:13px;
+  white-space:nowrap;">
+  <img src="icon-192.png" width="28" height="28" style="border-radius:6px">
+  <span style="color:var(--text)">Instalar <strong>Símbolos</strong> como app</span>
+  <button id="pwa-install-btn" style="background:var(--accent);color:#fff;border:none;border-radius:8px;
+    padding:6px 14px;cursor:pointer;font-family:'Syne',sans-serif;font-size:12px;font-weight:600;">
+    Instalar
+  </button>
+  <button id="pwa-dismiss-btn" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:16px;padding:0 2px;">✕</button>
+</div>
+
+<script>
+// ── SERVICE WORKER ───────────────────────────────────────────
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js")
+      .then(reg => {
+        console.log("[PWA] SW registrado:", reg.scope);
+        // Si hay nueva versión esperando, notificar
+        reg.addEventListener("updatefound", () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              console.log("[PWA] Nueva versión disponible");
+            }
+          });
+        });
+      })
+      .catch(err => console.warn("[PWA] Error al registrar SW:", err));
+  });
+}
+
+// ── INSTALL BANNER ───────────────────────────────────────────
+let deferredPrompt = null;
+const banner       = document.getElementById("pwa-banner");
+const installBtn   = document.getElementById("pwa-install-btn");
+const dismissBtn   = document.getElementById("pwa-dismiss-btn");
+
+function isInstalledPWA() {
+  return window.matchMedia("(display-mode: standalone)").matches
+      || window.matchMedia("(display-mode: fullscreen)").matches
+      || window.matchMedia("(display-mode: minimal-ui)").matches
+      || window.navigator.standalone === true
+      || document.referrer.startsWith("android-app://")
+      || localStorage.getItem("pwa_installed") === "1"
+      || localStorage.getItem("pwa_dismissed") === "1";
+}
+
+function showBanner() {
+  if (!banner || isInstalledPWA()) return;
+  banner.style.display = "flex";
+}
+
+function hideBanner() {
+  if (banner) banner.style.display = "none";
+}
+
+// Check via getInstalledRelatedApps if available
+if (!isInstalledPWA() && navigator.getInstalledRelatedApps) {
+  navigator.getInstalledRelatedApps().then(apps => {
+    if (apps.length > 0) localStorage.setItem("pwa_installed", "1");
+  }).catch(() => {});
+}
+
+if (!isInstalledPWA()) {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showBanner();
+  });
+}
+
+if(installBtn) installBtn.addEventListener("click", async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  console.log("[PWA] Install outcome:", outcome);
+  deferredPrompt = null;
+  hideBanner();
+  if (outcome === "accepted") localStorage.setItem("pwa_installed", "1");
+});
+
+if(dismissBtn) dismissBtn.addEventListener("click", () => {
+  hideBanner();
+  localStorage.setItem("pwa_dismissed", "1");
+});
+
+window.addEventListener("appinstalled", () => {
+  hideBanner();
+  localStorage.setItem("pwa_installed", "1");
+  console.log("[PWA] App instalada ✓");
+});
+</script>
+
+<script>
+/* ── VISUAL SEARCH ─────────────────────────────────────────── */
+const VISUAL_CATEGORIES = [
+  { label:'⭕ Círculos',  test: s => /CIRCLE|RING|WHEEL|BULLSEYE/i.test(s) },
+  { label:'★ Estrellas',  test: s => /STAR|ASTERISK|SPARKLE/i.test(s) },
+  { label:'♦ Rombos',    test: s => /DIAMOND|RHOMBUS|LOZENGE/i.test(s) },
+  { label:'■ Cuadrados',  test: s => /SQUARE|BOX|RECT/i.test(s) },
+  { label:'▲ Triángulos', test: s => /TRIANGLE|ARROW.*HEAD|PLAY/i.test(s) },
+  { label:'← Flechas',   test: s => /ARROW|HARPOON/i.test(s) },
+  { label:'♥ Corazones', test: s => /HEART/i.test(s) },
+  { label:'✓ Marcas',    test: s => /CHECK|BALLOT|TICK|CROSS|MARK/i.test(s) },
+  { label:'☀ Naturaleza',test: s => /SUN|MOON|CLOUD|RAIN|SNOW|LEAF|FLOWER|TREE|WAVE|FIRE/i.test(s) },
+  { label:'♩ Música',    test: s => /NOTE|MUSIC|SHARP|FLAT|CLEF/i.test(s) },
+  { label:'⚙ Técnico',   test: s => /GEAR|WRENCH|TOOL|KEY|LOCK|BOLT|SCREW/i.test(s) },
+  { label:'✉ Correo',    test: s => /MAIL|ENVELOPE|LETTER|INBOX|OUTBOX/i.test(s) },
+];
+
+let visualActiveFilter = null;
+
+function initVisual() {
+  const btns = document.getElementById('visual-filter-btns');
+  if (!btns || btns.children.length) return;
+  VISUAL_CATEGORIES.forEach(cat => {
+    const b = document.createElement('button');
+    b.className = 'tab-btn';
+    b.style.cssText = 'font-size:12px;padding:6px 12px';
+    b.textContent = cat.label;
+    b.onclick = () => {
+      visualActiveFilter = visualActiveFilter === cat.label ? null : cat.label;
+      btns.querySelectorAll('button').forEach(x => x.classList.toggle('active', x.textContent === visualActiveFilter));
+      visualFilter();
+    };
+    btns.appendChild(b);
+  });
+  visualFilter();
+}
+
+function visualFilter() {
+  const q = (document.getElementById('visual-search-input')?.value || '').toLowerCase().trim();
+  const cat = VISUAL_CATEGORIES.find(c => c.label === visualActiveFilter);
+  const grid = document.getElementById('visual-results-grid');
+  const empty = document.getElementById('visual-empty');
+  if (!grid) return;
+  grid.innerHTML = '';
+  let count = 0;
+  const MAX = 400;
+  for (const { sym, cp, fontClass } of allSymbols) {
+    if (count >= MAX) break;
+    try {
+      const name = (getUnicodeName ? getUnicodeName(cp) : '') || '';
+      if (cat && !cat.test(name)) continue;
+      if (q && !name.toLowerCase().includes(q) && !sym.includes(q)) continue;
+      const box = createBox(sym, cp, fontClass);
+      grid.appendChild(box);
+      count++;
+    } catch {}
+  }
+  empty.style.display = count === 0 ? '' : 'none';
+}
+
+/* ── WELCOME ────────────────────────────────────────────────── */
+const WELCOME_SHORTCUTS = [
+  { icon:'♩', label:'Música',      tab:'music' },
+  { icon:'∑', label:'Matemáticos', tab:'math' },
+  { icon:'←', label:'Flechas',     tab:'arrows' },
+  { icon:'◆', label:'Geométricos', tab:'geo' },
+  { icon:'😀',label:'Emoji',       tab:'emoji' },
+  { icon:'ᚱ', label:'Especiales',  tab:'especiales' },
+  { icon:'¥', label:'Monedas',     tab:'currency' },
+  { icon:'中', label:'CJK',        tab:'cjk' },
+];
+
+function initWelcome() {
+  const grid = document.getElementById('welcome-cards');
+  if (!grid || grid.children.length) return;
+  WELCOME_SHORTCUTS.forEach(({ icon, label, tab }) => {
+    const card = document.createElement('button');
+    card.style.cssText = 'background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:18px 14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;font-family:"Syne",sans-serif;color:var(--text);transition:border-color .15s,transform .2s cubic-bezier(.34,1.56,.64,1)';
+    card.innerHTML = '<span style="font-size:32px;line-height:1">' + icon + '</span><span style="font-size:13px;font-weight:700">' + label + '</span>';
+    card.onmouseover = () => { card.style.borderColor='var(--accent)'; card.style.transform='translateY(-3px)'; };
+    card.onmouseout  = () => { card.style.borderColor='var(--border)'; card.style.transform=''; };
+    card.onclick = () => activateTab(tab);
+    grid.appendChild(card);
+  });
+  welcomeNewRandom();
+}
+
+function welcomeNewRandom() {
+  if (!allSymbols.length) return;
+  const { sym, cp } = allSymbols[Math.floor(Math.random() * allSymbols.length)];
+  const name = (typeof getUnicodeName === 'function') ? getUnicodeName(cp) : '';
+  const el = document.getElementById('welcome-random-sym');
+  const nameEl = document.getElementById('welcome-random-name');
+  const cpEl = document.getElementById('welcome-random-cp');
+  if (el) { el.textContent = sym; el.onclick = () => navigator.clipboard?.writeText(sym); }
+  if (nameEl) nameEl.textContent = name || '—';
+  if (cpEl) cpEl.textContent = 'U+' + cp.toString(16).toUpperCase().padStart(4,'0');
+}
+
+// Hook into activateTab to init panels lazily
+const _origActivateTab = activateTab;
+// Patch: init visual/welcome when their tab is activated
+const _origActivate = typeof activateTab === 'function' ? activateTab : null;
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-tab]');
+  if (!btn) return;
+  if (btn.dataset.tab === 'visual') setTimeout(initVisual, 50);
+  if (btn.dataset.tab === 'welcome') setTimeout(initWelcome, 50);
+});
+// Also init if loaded via URL param
+window.addEventListener('load', () => {
+  const t = new URLSearchParams(location.search).get('tab');
+  if (t === 'visual') initVisual();
+  if (t === 'welcome') initWelcome();
+});
+</script>
+
+<script>
+/* ── TAB STRIP — soporte para tabbed mode en ChromeOS ───────── */
+
+// Helper para abrir una URL como nueva tab dentro de la PWA
+function openPwaTab(url) {
+  // En tabbed mode (ChromeOS) window.open abre una tab dentro de la PWA
+  // En standalone abre ventana nueva, en browser abre tab normal
+  const w = window.open(url, '_blank');
+  if (!w) {
+    // Popup bloqueado — navegar en la misma ventana como fallback
+    location.href = url;
+  }
+}
+
+// launchQueue: cuando ChromeOS lanza la app con una URL específica
+if ('launchQueue' in window) {
+  window.launchQueue.setConsumer(launchParams => {
+    if (launchParams.targetURL) {
+      const url = new URL(launchParams.targetURL);
+      const tab = url.searchParams.get('tab');
+      if (tab && typeof activateTab === 'function') activateTab(tab);
+    }
+    // File handling via launchQueue
+    if (launchParams.files && launchParams.files.length > 0) {
+      launchParams.files[0].getFile().then(file => {
+        const msg = { type: 'fileOpened', file };
+        window.dispatchEvent(new CustomEvent('pwa-file-open', { detail: file }));
+      });
+    }
+  });
+}
+
+// Escuchar mensajes del SW (broadcast entre tabs)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', event => {
+    const { type, url } = event.data || {};
+    if (type === 'broadcast') {
+      // Sincronizar favoritos/historial entre tabs abiertas
+      if (event.data.action === 'sync-favorites') {
+        if (typeof renderFavorites === 'function') renderFavorites();
+      }
+      if (event.data.action === 'sync-history') {
+        if (typeof renderHistory === 'function') renderHistory();
+      }
+    }
+  });
+}
+
+// Botón flotante de nueva tab (solo en tabbed mode / ChromeOS desktop)
+function injectNewTabBtn() {
+  // Mostrar siempre — en tabbed mode va en la titlebar, en standalone como botón fijo
+  const existing = document.getElementById('pwa-new-tab-btn');
+  if (existing) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'pwa-new-tab-btn';
+  btn.title = 'Nueva tab — Tools';
+  btn.innerHTML = '<span style="font-size:20px;line-height:1">＋</span><span style="font-size:10px;font-family:Syne,sans-serif;font-weight:700;margin-left:4px">Tools</span>';
+  btn.style.cssText = [
+    'position:fixed',
+    'bottom:calc(env(safe-area-inset-bottom,0px) + 72px)',
+    'right:16px',
+    'height:44px',
+    'padding:0 14px',
+    'border-radius:22px',
+    'border:1.5px solid var(--border)',
+    'background:var(--surface)',
+    'color:var(--text2)',
+    'cursor:pointer',
+    'z-index:99990',
+    'display:flex','align-items:center','justify-content:center',
+    'box-shadow:0 4px 16px var(--shadow2)',
+    'transition:border-color .15s,color .15s,transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s',
+    '-webkit-app-region:no-drag',
+    'backdrop-filter:blur(8px)',
+  ].join(';');
+  btn.onmouseover = () => { btn.style.borderColor='var(--accent)'; btn.style.color='var(--accent)'; btn.style.transform='scale(1.05)'; btn.style.boxShadow='0 6px 24px var(--shadow2)'; };
+  btn.onmouseout  = () => { btn.style.borderColor='var(--border)'; btn.style.color='var(--text2)'; btn.style.transform=''; btn.style.boxShadow='0 4px 16px var(--shadow2)'; };
+  btn.onclick = () => openPwaTab('/tools.html');
+
+  // En tabbed/wco: reposicionar a la titlebar
+  const reposition = () => {
+    const tabbed = window.matchMedia('(display-mode: tabbed)').matches;
+    const wco    = window.matchMedia('(display-mode: window-controls-overlay)').matches;
+    if (tabbed || wco) {
+      btn.style.bottom = '';
+      btn.style.right  = '8px';
+      btn.style.top    = 'calc(env(titlebar-area-y, 6px) + 4px)';
+      btn.style.height = '28px';
+      btn.style.padding = '0 10px';
+      btn.style.fontSize = '12px';
+      btn.style.borderRadius = '8px';
+      btn.style.boxShadow = 'none';
+    }
+  };
+  reposition();
+  window.matchMedia('(display-mode: tabbed)').addEventListener('change', reposition);
+  window.matchMedia('(display-mode: window-controls-overlay)').addEventListener('change', reposition);
+
+  document.body.appendChild(btn);
+}
+// ── MODO COMPACTO ────────────────────────────────────────────
+const compactBtn = document.getElementById('compact-toggle-btn');
+let compactMode = localStorage.getItem('sym_compact') === '1';
+if (compactMode) { document.body.classList.add('compact-mode'); compactBtn && compactBtn.classList.add('active'); }
+if (compactBtn) compactBtn.addEventListener('click', () => {
+  compactMode = !compactMode;
+  document.body.classList.toggle('compact-mode', compactMode);
+  compactBtn.classList.toggle('active', compactMode);
+  localStorage.setItem('sym_compact', compactMode ? '1' : '0');
+});
+
+// ── SLIDER TAMAÑO ────────────────────────────────────────────
+const sizeSlider = document.getElementById('sym-size-slider');
+const sizeStyleEl = document.createElement('style');
+sizeStyleEl.id = 'sym-size-style';
+document.head.appendChild(sizeStyleEl);
+function applySizeSlider(v) {
+  sizeStyleEl.textContent = `:not(.compact-mode) .symbol { font-size: ${v}px !important; min-height: ${Math.round(v*1.24)}px !important; }`;
+  if (sizeSlider) sizeSlider.title = v + 'px';
+}
+const savedSize = parseInt(localStorage.getItem('sym_size') || '42', 10);
+if (sizeSlider) { sizeSlider.value = savedSize; applySizeSlider(savedSize); }
+if (sizeSlider) sizeSlider.addEventListener('input', () => {
+  applySizeSlider(sizeSlider.value);
+  localStorage.setItem('sym_size', sizeSlider.value);
+});
+
+// ── COPY-ALL FAV/HISTORIAL ───────────────────────────────────
+const copyAllFavBtn  = document.getElementById('copy-all-fav-btn');
+const copyAllHistBtn = document.getElementById('copy-all-hist-btn');
+if (copyAllFavBtn) copyAllFavBtn.addEventListener('click', () => {
+  if (!favorites.length) return;
+  const text = favorites.map(f => f.sym).join(' ');
+  const prev = copyAllFavBtn.textContent;
+  navigator.clipboard?.writeText(text).then(() => {
+    copyAllFavBtn.textContent = '✓ Copiados ' + favorites.length;
+    copyAllFavBtn.classList.add('active');
+    setTimeout(() => { copyAllFavBtn.textContent = prev; copyAllFavBtn.classList.remove('active'); }, 1500);
+  });
+});
+if (copyAllHistBtn) copyAllHistBtn.addEventListener('click', () => {
+  if (!history.length) return;
+  const text = history.map(h => h.sym).join(' ');
+  const prev = copyAllHistBtn.textContent;
+  navigator.clipboard?.writeText(text).then(() => {
+    copyAllHistBtn.textContent = '✓ Copiados ' + history.length;
+    copyAllHistBtn.classList.add('active');
+    setTimeout(() => { copyAllHistBtn.textContent = prev; copyAllHistBtn.classList.remove('active'); }, 1500);
+  });
+});
+
+// ── BÚSQUEDAS RECIENTES ─────────────────────────────────────
+let recentSearches = JSON.parse(localStorage.getItem('sym_recent_searches') || '[]');
+
+function addRecentSearch(query, mode, sym) {
+  const entry = { query, mode, sym: sym || '' };
+  recentSearches = recentSearches.filter(r => !(r.query === query && r.mode === mode));
+  recentSearches.unshift(entry);
+  if (recentSearches.length > 8) recentSearches.pop();
+  localStorage.setItem('sym_recent_searches', JSON.stringify(recentSearches));
+  renderRecentSearches();
+}
+
+function renderRecentSearches() {
+  const cont = document.getElementById('recent-searches');
+  if (!cont) return;
+  cont.innerHTML = '';
+  if (!recentSearches.length) return;
+  const lbl = document.createElement('span');
+  lbl.style.cssText = 'font-family:"DM Mono",monospace;font-size:10px;color:var(--text2);opacity:.7;align-self:center;white-space:nowrap';
+  lbl.textContent = 'Recientes:';
+  cont.appendChild(lbl);
+  recentSearches.slice(0, 6).forEach(r => {
+    const chip = document.createElement('button');
+    chip.className = 'recent-chip';
+    if (r.sym) { const s = document.createElement('span'); s.className = 'recent-chip-sym'; s.textContent = r.sym; chip.appendChild(s); }
+    const t = document.createElement('span'); t.textContent = r.query; chip.appendChild(t);
+    chip.onclick = () => {
+      // Activar el modo y rellenar el input
+      const modeTab = document.querySelector(`#search-popup-overlay .search-type-tab[data-mode="${r.mode}"]`);
+      if (modeTab) modeTab.click();
+      const inp = document.getElementById('search-popup-input');
+      if (inp) { inp.value = r.query; inp.dispatchEvent(new Event('input')); }
+    };
+    cont.appendChild(chip);
+  });
+}
+
+// Integrar con búsqueda existente: guardar búsquedas con resultado
+const _origRunPopupSearch = runPopupSearch;
+window.runPopupSearch = function(query) {
+  _origRunPopupSearch(query);
+  // Guardar solo si hay resultados
+  setTimeout(() => {
+    const grid = document.getElementById('search-popup-grid');
+    if (grid && grid.children.length > 0) {
+      const firstSym = grid.querySelector('.symbol')?.textContent?.trim() || '';
+      addRecentSearch(query, searchMode, firstSym);
+    }
+  }, 100);
+};
+
+// ── CONTADOR DE RESULTADOS ───────────────────────────────────
+const _origRunSearch2 = window.runPopupSearch;
+window.runPopupSearch = function(query) {
+  _origRunSearch2(query);
+  setTimeout(() => {
+    const grid = document.getElementById('search-popup-grid');
+    const countEl = document.getElementById('search-result-count');
+    if (countEl) {
+      const n = grid ? grid.children.length : 0;
+      if (n > 0) {
+        countEl.textContent = n + (n === 120 ? '+ resultados (mostrando los primeros)' : ' resultado' + (n !== 1 ? 's' : ''));
+        countEl.classList.add('show');
+      } else {
+        countEl.classList.remove('show');
+      }
+    }
+  }, 150);
+};
+
+// Mostrar recientes cuando se abre el popup
+const _origSearchTrigger = document.getElementById('search-trigger-btn');
+if (_origSearchTrigger) {
+  _origSearchTrigger.addEventListener('click', renderRecentSearches, true);
+}
+// Limpiar contador al cerrar
+const _origCloseSearch = window.closeSearchPopup;
+window.closeSearchPopup = function() {
+  _origCloseSearch && _origCloseSearch();
+  const countEl = document.getElementById('search-result-count');
+  if (countEl) countEl.classList.remove('show');
+};
+
+renderRecentSearches();
+
+// ── WELCOME: SYMBOL OF THE DAY mejorado ─────────────────────
+// Ya existe welcomeNewRandom(), solo añadimos el botón de refresh
+document.addEventListener('DOMContentLoaded', () => {
+  // Botón refrescar símbolo aleatorio en welcome
+  const randomSymEl = document.getElementById('welcome-random-sym');
+  if (randomSymEl) {
+    const refreshBtn = document.createElement('button');
+    refreshBtn.style.cssText = 'margin-left:10px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;color:var(--text2);font-family:"DM Mono",monospace;transition:border-color .15s,color .15s';
+    refreshBtn.title = 'Nuevo símbolo aleatorio';
+    refreshBtn.textContent = '↺';
+    refreshBtn.onmouseover = () => { refreshBtn.style.borderColor='var(--accent)'; refreshBtn.style.color='var(--accent)'; };
+    refreshBtn.onmouseout  = () => { refreshBtn.style.borderColor='var(--border)'; refreshBtn.style.color='var(--text2)'; };
+    refreshBtn.onclick = (e) => { e.stopPropagation(); welcomeNewRandom && welcomeNewRandom(); };
+    const cpEl = document.getElementById('welcome-random-cp');
+    if (cpEl && cpEl.parentNode) cpEl.parentNode.appendChild(refreshBtn);
+  }
+  // Toolbar hide on mobile
+  const te = document.getElementById('toolbar-extra');
+  if (te && window.innerWidth <= 600) {
+    te.style.display = 'none';
+    // Botón para mostrar/ocultar toolbar en mobile
+    const showTbBtn = document.createElement('button');
+    showTbBtn.className = 'mobile-bar-btn';
+    showTbBtn.title = 'Opciones';
+    showTbBtn.style.cssText = 'font-size:9px';
+    showTbBtn.innerHTML = '<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" width="20" height="20"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>Opciones';
+    showTbBtn.onclick = () => {
+      const isHidden = te.style.display === 'none';
+      te.style.display = isHidden ? 'flex' : 'none';
+    };
+    const mobileBar = document.getElementById('mobile-bar');
+    if (mobileBar) mobileBar.appendChild(showTbBtn);
+  }
+});
+
+// ── KEYBOARD SHORTCUT: Ctrl/Cmd+K → abrir búsqueda ──────────
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    const overlay = document.getElementById('search-popup-overlay');
+    if (overlay && !overlay.classList.contains('open')) {
+      overlay.classList.add('open');
+      setTimeout(() => { const inp = document.getElementById('search-popup-input'); if(inp){inp.focus();inp.click();} }, 100);
+      renderRecentSearches();
+    }
+  }
+  // Alt+← Alt+→ para navegar entre tabs
+  if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    const TABS = ['welcome','music','math','arrows','geo','misc','dingbats','emoji','transport','latin','currency','enclosed','cjk','ancient','especiales','greek','ipa','visual'];
+    const idx = TABS.indexOf(typeof currentTab !== 'undefined' ? currentTab : 'music');
+    if (idx === -1) return;
+    const next = e.key === 'ArrowRight' ? Math.min(idx+1, TABS.length-1) : Math.max(idx-1, 0);
+    if (next !== idx) activateTab(TABS[next]);
+  }
+});
+
+// ── HINT: Ctrl+K en el search popup ─────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const hint = document.getElementById('search-hint');
+  if (hint) {
+    const kbdSpan = hint.querySelector('kbd');
+    if (kbdSpan && kbdSpan.parentNode) {
+      const kbdK = document.createElement('kbd');
+      kbdK.textContent = 'Ctrl+K';
+      const sep = document.createTextNode(' abrir · ');
+      kbdSpan.parentNode.insertBefore(sep, kbdSpan);
+      kbdSpan.parentNode.insertBefore(kbdK, sep);
+    }
+  }
+});
+</script>
+
+
+<script>
+/* ── PERIODIC SYNC + APP BADGE ──────────────────────────────── */
+async function registerPeriodicSync() {
+  if (!('serviceWorker' in navigator) || !('periodicSync' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    // Registrar sync de UnicodeData cada 24h
+    await reg.periodicSync.register('refresh-unicode-data', {
+      minInterval: 24 * 60 * 60 * 1000
+    });
+    // Registrar sync de páginas HTML cada 12h
+    await reg.periodicSync.register('refresh-pages', {
+      minInterval: 12 * 60 * 60 * 1000
+    });
+  } catch (e) {
+    // No disponible (iOS, Firefox) — silenciar
+  }
+}
+
+function updateAppBadge() {
+  if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return;
+  try {
+    // Contar favoritos desde localStorage
+    const favs = JSON.parse(localStorage.getItem('sym_favorites') || '[]');
+    navigator.serviceWorker.controller.postMessage({
+      type: 'setBadge',
+      count: favs.length
+    });
+  } catch (e) {}
+}
+
+// Ejecutar al cargar y cada vez que cambien favoritos
+window.addEventListener('load', () => {
+  registerPeriodicSync();
+  updateAppBadge();
+});
+
+// Interceptar cambios en localStorage para actualizar el badge
+const _origSetItem = localStorage.setItem.bind(localStorage);
+localStorage.setItem = function(key, value) {
+  _origSetItem(key, value);
+  if (key === 'sym_favorites') updateAppBadge();
+};
+</script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   MOBILE EXCLUSIVES — gestos, haptics, share, pull-to-refresh
+   ══════════════════════════════════════════════════════════════ */
+
+// ── 1. HAPTICS ───────────────────────────────────────────────
+function haptic(type = 'light') {
+  if (!navigator.vibrate) return;
+  const patterns = { light: [8], medium: [20], heavy: [40], success: [10,50,10], error: [40,30,40] };
+  navigator.vibrate(patterns[type] || patterns.light);
+}
+
+// Patch copiar símbolo para añadir haptic
+const _origCopyWithFeedback = typeof copyWithFeedback === 'function' ? copyWithFeedback : null;
+if (_origCopyWithFeedback) {
+  window.copyWithFeedback = function(text, el) {
+    haptic('light');
+    return _origCopyWithFeedback(text, el);
+  };
+}
+
+// ── 2. COMPARTIR — hoja nativa iOS/Android ──────────────────
+async function shareSymbol(sym, cp, name) {
+  const cpHex = 'U+' + cp.toString(16).toUpperCase().padStart(4, '0');
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: `${sym} — ${name || cpHex}`,
+        text:  `${sym}
+${name || ''}
+${cpHex}
+
+vía simbolos.pages.dev`,
+        url:   `https://simbolos.pages.dev/simbolos.html?search=${cp.toString(16)}`
+      });
+      haptic('success');
+    } catch (e) {
+      if (e.name !== 'AbortError') console.warn('Share failed:', e);
+    }
+  } else {
+    // Fallback: copiar al portapapeles
+    navigator.clipboard?.writeText(sym);
+    haptic('light');
+  }
+}
+
+// Botón compartir en la barra inferior
+const mobShareBtn = document.getElementById('mob-share-btn');
+if (mobShareBtn) {
+  mobShareBtn.addEventListener('click', () => {
+    // Compartir el último símbolo copiado o uno aleatorio
+    const lastCopied = window._lastCopiedSym;
+    if (lastCopied) {
+      shareSymbol(lastCopied.sym, lastCopied.cp, lastCopied.name);
+    } else if (allSymbols?.length) {
+      const r = allSymbols[Math.floor(Math.random() * allSymbols.length)];
+      shareSymbol(r.sym, r.cp, typeof getUnicodeName === 'function' ? getUnicodeName(r.cp) : '');
+    }
+  });
+}
+
+// Guardar último símbolo copiado para compartir
+document.addEventListener('click', e => {
+  const box = e.target.closest('.sym-box, .inspect-char');
+  if (!box) return;
+  const sym = box.querySelector('.sym, .ic-sym')?.textContent?.trim();
+  const cp  = parseInt(box.dataset?.cp || box.title || '0');
+  if (sym) {
+    window._lastCopiedSym = { sym, cp, name: typeof getUnicodeName === 'function' ? getUnicodeName(cp) : '' };
+  }
+});
+
+// ── 3. LONG PRESS en símbolo — menú rápido ──────────────────
+let longPressTimer = null;
+let longPressTarget = null;
+
+document.addEventListener('touchstart', e => {
+  const box = e.target.closest('.sym-box');
+  if (!box) return;
+  longPressTarget = box;
+  longPressTimer = setTimeout(() => {
+    haptic('medium');
+    showLongPressMenu(box, e.touches[0]);
+  }, 500);
+}, { passive: true });
+
+document.addEventListener('touchend',   () => clearTimeout(longPressTimer), { passive: true });
+document.addEventListener('touchmove',  () => clearTimeout(longPressTimer), { passive: true });
+document.addEventListener('touchcancel',() => clearTimeout(longPressTimer), { passive: true });
+
+function showLongPressMenu(box, touch) {
+  // Quitar menú anterior si existe
+  document.getElementById('lp-menu')?.remove();
+
+  const sym  = box.querySelector('.sym')?.textContent?.trim() || '';
+  const cp   = parseInt(box.dataset?.cp || '0');
+  const name = typeof getUnicodeName === 'function' ? getUnicodeName(cp) : '';
+  const cpHex = 'U+' + cp.toString(16).toUpperCase().padStart(4,'0');
+
+  const menu = document.createElement('div');
+  menu.id = 'lp-menu';
+  menu.style.cssText = [
+    'position:fixed',
+    'z-index:99998',
+    'background:var(--surface)',
+    'border:1.5px solid var(--border)',
+    'border-radius:18px',
+    'padding:8px',
+    'box-shadow:0 16px 48px rgba(0,0,0,0.4)',
+    'min-width:220px',
+    'font-family:Syne,sans-serif',
+    'animation:fadeUp .15s ease',
+  ].join(';');
+
+  // Posición: encima del toque, centrado
+  const x = Math.min(touch.clientX, window.innerWidth - 240);
+  const y = Math.max(touch.clientY - 200, 8);
+  menu.style.left = x + 'px';
+  menu.style.top  = y + 'px';
+
+  const header = `<div style="padding:10px 12px 8px;border-bottom:1px solid var(--border);margin-bottom:4px">
+    <div style="font-size:36px;line-height:1">${sym}</div>
+    <div style="font-size:11px;color:var(--text2);font-family:'DM Mono',monospace;margin-top:4px">${cpHex} · ${name}</div>
+  </div>`;
+
+  const actions = [
+    { icon:'📋', label:'Copiar símbolo', fn: () => { navigator.clipboard?.writeText(sym); haptic('light'); } },
+    { icon:'🔗', label:'Copiar U+código', fn: () => { navigator.clipboard?.writeText(cpHex); haptic('light'); } },
+    { icon:'ℹ️', label:'Ver info', fn: () => { if(typeof openModal==='function') openModal(sym,cp,''); } },
+    { icon:'⭐', label:'Añadir a favoritos', fn: () => { if(typeof toggleFavorite==='function') toggleFavorite(sym,cp,''); haptic('success'); } },
+    { icon:'↗️', label:'Compartir', fn: () => shareSymbol(sym, cp, name) },
+  ];
+
+  menu.innerHTML = header + actions.map(a =>
+    `<button onclick="this.closest('#lp-menu').remove();(${a.fn.toString()})()" style="width:100%;display:flex;align-items:center;gap:10px;padding:11px 12px;border:none;background:none;color:var(--text);font-family:Syne,sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-radius:12px;text-align:left;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">
+      <span style="font-size:16px">${a.icon}</span>${a.label}
+    </button>`
+  ).join('');
+
+  document.body.appendChild(menu);
+
+  // Cerrar al tocar fuera
+  setTimeout(() => {
+    document.addEventListener('touchstart', function close(e) {
+      if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('touchstart', close); }
+    }, { passive: true });
+  }, 100);
+}
+
+// ── 4. SWIPE HORIZONTAL entre tabs principales ───────────────
+(function() {
+  const TABS_ORDER = ['welcome','music','math','arrows','geo','misc','dingbats','emoji','transport','latin','currency','enclosed','cjk','ancient','especiales','greek','ipa','visual'];
+  let swipeStartX = 0, swipeStartY = 0, swipeActive = false;
+
+  document.addEventListener('touchstart', e => {
+    // Solo swipe horizontal si no hay scroll vertical activo
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+    swipeActive = true;
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!swipeActive) return;
+    swipeActive = false;
+    const dx = e.changedTouches[0].clientX - swipeStartX;
+    const dy = e.changedTouches[0].clientY - swipeStartY;
+    // Solo si el gesto es más horizontal que vertical y más de 60px
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    // No swipear si el toque empezó en la barra de tabs o móvil inferior
+    const startEl = document.elementFromPoint(swipeStartX, swipeStartY);
+    if (startEl?.closest('.tabs, .mobile-bar, #search-popup-overlay, #info-modal')) return;
+
+    const idx = TABS_ORDER.indexOf(typeof currentTab !== 'undefined' ? currentTab : 'music');
+    if (idx === -1) return;
+    const nextIdx = dx < 0 ? Math.min(idx+1, TABS_ORDER.length-1) : Math.max(idx-1, 0);
+    if (nextIdx !== idx) {
+      haptic('light');
+      activateTab(TABS_ORDER[nextIdx]);
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    const dx = Math.abs(e.touches[0].clientX - swipeStartX);
+    const dy = Math.abs(e.touches[0].clientY - swipeStartY);
+    // Si el movimiento es más vertical, cancelar swipe de tab
+    if (dy > dx * 1.2) swipeActive = false;
+  }, { passive: true });
+})();
+
+// ── 5. PULL-TO-REFRESH ──────────────────────────────────────
+(function() {
+  let ptStart = 0, ptActive = false, ptIndicator = null;
+  const THRESHOLD = 80;
+
+  function getIndicator() {
+    if (!ptIndicator) {
+      ptIndicator = document.createElement('div');
+      ptIndicator.id = 'ptr-indicator';
+      ptIndicator.style.cssText = [
+        'position:fixed','top:-60px','left:50%','transform:translateX(-50%)',
+        'width:44px','height:44px','border-radius:50%',
+        'background:var(--surface)','border:1.5px solid var(--border)',
+        'display:flex','align-items:center','justify-content:center',
+        'font-size:20px','z-index:99997',
+        'box-shadow:0 4px 16px rgba(0,0,0,0.3)',
+        'transition:top .15s ease',
+        'pointer-events:none',
+      ].join(';');
+      ptIndicator.textContent = '↓';
+      document.body.appendChild(ptIndicator);
+    }
+    return ptIndicator;
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY === 0) {
+      ptStart = e.touches[0].clientY;
+      ptActive = true;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!ptActive) return;
+    const dy = e.touches[0].clientY - ptStart;
+    if (dy < 10) return;
+    const ind = getIndicator();
+    const progress = Math.min(dy / THRESHOLD, 1);
+    ind.style.top = Math.min(dy * 0.4 - 30, 20) + 'px';
+    ind.style.opacity = progress.toString();
+    ind.textContent = progress >= 1 ? '↺' : '↓';
+    if (progress >= 1) ind.style.borderColor = 'var(--accent)';
+    else ind.style.borderColor = 'var(--border)';
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!ptActive) return;
+    ptActive = false;
+    const dy = e.changedTouches[0].clientY - ptStart;
+    const ind = getIndicator();
+    ind.style.top = '-60px';
+    ind.style.opacity = '0';
+    if (dy >= THRESHOLD) {
+      haptic('medium');
+      // Recargar la tab actual (re-renderizar historial/favoritos)
+      if (typeof renderHistory === 'function') renderHistory();
+      if (typeof renderFavorites === 'function') renderFavorites();
+      if (typeof renderStats === 'function') renderStats();
+      // Feedback visual breve
+      ind.style.top = '16px';
+      ind.textContent = '✓';
+      ind.style.borderColor = 'var(--accent)';
+      setTimeout(() => { ind.style.top = '-60px'; }, 800);
+    }
+  }, { passive: true });
+})();
+
+// ── 6. HAPTIC en Memory Match (cuando ya existe) ─────────────
+// Se parchea memFlip para añadir vibración en match/error
+if (typeof window !== 'undefined') {
+  const _patchMemFlip = () => {
+    const orig = window.memFlip;
+    if (!orig) return;
+    window.memFlip = function(i) {
+      orig(i);
+      // El resultado se evalúa en el setTimeout de memFlip, así que escuchamos
+    };
+    // Observar cambios en mem-pairs para detectar match
+    const pairsEl = document.getElementById('mem-pairs');
+    if (pairsEl) {
+      const obs = new MutationObserver(() => haptic('success'));
+      obs.observe(pairsEl, { childList: true, subtree: true, characterData: true });
+    }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _patchMemFlip);
+  else _patchMemFlip();
+}
+</script>
+
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a01bc959e97a03c9',t:'MTc3OTc4ODA5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
